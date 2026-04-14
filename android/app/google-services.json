@@ -1,0 +1,54 @@
+{
+  "project_info": {
+    "project_number": "210911877973",
+    "project_id": "portones-mym",
+    "storage_bucket": "portones-mym.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:210911877973:android:315323142b5c8aa21beddc",
+        "android_client_info": {
+          "package_name": "com.example.portones_mym"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "210911877973-4b9mlti881sm06djm0l2o23gkn2icub2.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.portones_mym",
+            "certificate_hash": "e654815a24b3ddbfcc5fc0453e9f2ab2afd10bac"
+          }
+        },
+        {
+          "client_id": "210911877973-q9ndmvbfgld3cdspg0lukqbt0m0jisub.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyA8gPkBGOa0DTQJ8Gext5RNTS-lpOZKeTU"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "210911877973-50tm558p5qtvmt0cb9o0top7utkqtdi0.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "210911877973-a9umh04jltt7rf7amfchccahodj0h6am.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.portonesMym"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

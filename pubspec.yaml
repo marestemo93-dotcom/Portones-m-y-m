@@ -1,0 +1,101 @@
+name: portones_mym
+description: "Agenda y calendario para Portones M y M (uso personal)."
+publish_to: "none"
+version: 1.0.0+1
+
+environment:
+  sdk: ">=3.4.0 <4.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  just_audio: ^0.9.38
+  fl_chart: ^0.66.2
+
+  firebase_core: ^2.27.0
+  firebase_auth: ^4.17.8
+  cloud_firestore: ^4.15.8
+  google_sign_in: ^6.2.1
+
+  # ✅ Seguridad
+  local_auth: ^2.2.0
+  shared_preferences: ^2.2.3
+  local_auth_android: ^1.0.43
+
+
+  # Localización en español
+  flutter_localizations:
+    sdk: flutter
+
+  cupertino_icons: ^1.0.8
+
+  # Estado y arquitectura
+  flutter_riverpod: ^2.5.1
+
+  # Calendario principal
+  table_calendar: ^3.1.2
+
+  # Manejo de fechas (compatible con flutter_localizations)
+  intl: ^0.20.2
+
+  # Persistencia local
+  hive: ^2.2.3
+  hive_flutter: ^1.1.0
+
+  # IDs únicos
+  uuid: ^4.4.0
+
+  # Notificaciones y zonas horarias
+  flutter_local_notifications: ^17.2.2
+  timezone: ^0.9.4
+
+  # Abrir enlaces externos (por ejemplo Waze)
+  url_launcher: ^6.3.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+  flutter_lints: ^4.0.0
+
+  # Generación del ícono Android
+  flutter_launcher_icons: ^0.13.1
+
+  # Pantalla de inicio (splash)
+  flutter_native_splash: ^2.4.1
+
+flutter:
+  uses-material-design: true
+  generate: true
+
+  assets:
+    - assets/brand/logo.png
+    - assets/brand/icon.png
+    - assets/alarm_loud.mp3
+
+# ─────────────────────────────────────────────
+# ÍCONO (ANDROID)
+# ─────────────────────────────────────────────
+flutter_launcher_icons:
+  android: true
+  ios: false
+  image_path: assets/brand/icon.png
+  adaptive_icon_background: "#000000"
+  adaptive_icon_foreground: assets/brand/icon.png
+
+# ─────────────────────────────────────────────
+# SPLASH
+# ─────────────────────────────────────────────
+flutter_native_splash:
+  color: "#000000"
+  image: assets/brand/logo.png
+  android: true
+  ios: false
+  fullscreen: true
+
+  android_12:
+    color: "#000000"
+    image: assets/brand/logo.png
+
+
