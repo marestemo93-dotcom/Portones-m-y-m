@@ -374,7 +374,7 @@ class _JobDetailScreenState extends ConsumerState<JobDetailScreen> {
                   Text('Fecha: ${DateFormat.yMMMMd(kLocaleEs).format(_job.fecha)}'),
                   Text('Hora: $timeStr'),
                   const SizedBox(height: 8),
-                  Text('Próxima visita: $nextVisitText', style: TextStyle(color: Colors.white.withOpacity(0.8))),
+                  Text('Próxima visita: $nextVisitText', style: TextStyle(color: Colors.white.withValues(alpha:0.8))),
                   const SizedBox(height: 10),
 
                   Row(
@@ -383,7 +383,7 @@ class _JobDetailScreenState extends ConsumerState<JobDetailScreen> {
                       Expanded(
                         child: Text(
                           'Garantía: $garantiaText',
-                          style: TextStyle(color: Colors.white.withOpacity(0.8)),
+                          style: TextStyle(color: Colors.white.withValues(alpha:0.8)),
                         ),
                       ),
                       if (garantia != null)
@@ -405,7 +405,7 @@ class _JobDetailScreenState extends ConsumerState<JobDetailScreen> {
                   const Divider(height: 24),
 
                   // ✅ EDITAR TODO
-                  Text('Editar información:', style: TextStyle(color: Colors.white.withOpacity(0.75))),
+                  Text('Editar información:', style: TextStyle(color: Colors.white.withValues(alpha:0.75))),
                   const SizedBox(height: 10),
 
                   TextField(
@@ -579,7 +579,7 @@ class _JobDetailScreenState extends ConsumerState<JobDetailScreen> {
                       Flexible(
                         child: Text(
                           client?.nombre ?? _job.clientNameSnapshot ?? '',
-                          style: TextStyle(color: Colors.white.withOpacity(0.55)),
+                          style: TextStyle(color: Colors.white.withValues(alpha:0.55)),
                           overflow: TextOverflow.ellipsis,
                         ),
                       ),
@@ -590,7 +590,7 @@ class _JobDetailScreenState extends ConsumerState<JobDetailScreen> {
                   Text(
                     'Al marcar “Listo” te pregunta cada cuántos meses y crea la próxima visita en el calendario con nombre, teléfono, ubicación y el trabajo.',
                     textAlign: TextAlign.center,
-                    style: TextStyle(color: Colors.white.withOpacity(0.65)),
+                    style: TextStyle(color: Colors.white.withValues(alpha:0.65)),
                   ),
                 ],
               ),

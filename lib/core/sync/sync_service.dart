@@ -25,7 +25,7 @@ class SyncService {
     _running = true;
 
     try {
-      final deviceId = await DeviceId.getOrCreate();
+      final deviceId = DeviceId.getOrCreate();
 
       final dirty = await jobsRepo.getDirtyJobs();
       if (dirty.isEmpty) return;

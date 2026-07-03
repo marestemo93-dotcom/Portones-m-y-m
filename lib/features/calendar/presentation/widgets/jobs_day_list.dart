@@ -12,7 +12,7 @@ import 'package:portones_mym/features/calendar/presentation/widgets/job_tile.dar
 /// (No depende del key del día, así evitamos el caso donde el job cae en otro key)
 final jobsBoxTickProvider = StreamProvider<void>((ref) {
   final box = Hive.box(kJobsBox);
-  return box.watch().map((_) => null);
+  return box.watch().map((_) {});
 });
 
 class JobsDayList extends ConsumerWidget {

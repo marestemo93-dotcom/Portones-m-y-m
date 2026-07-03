@@ -20,10 +20,7 @@ class DeviceId {
 
     final random = Random();
 
-    id =
-        DateTime.now().millisecondsSinceEpoch.toString()
-            + "_"
-            + random.nextInt(999999).toString();
+    id = '${DateTime.now().millisecondsSinceEpoch}_${random.nextInt(999999)}';
 
     box.put(_key, id);
 

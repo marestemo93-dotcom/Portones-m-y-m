@@ -145,12 +145,12 @@ class _IngresosChartScreenState extends ConsumerState<IngresosChartScreen> {
                 decoration: BoxDecoration(
                   color: const Color(0xFF111827),
                   borderRadius: BorderRadius.circular(18),
-                  border: Border.all(color: Colors.white.withOpacity(0.06)),
+                  border: Border.all(color: Colors.white.withValues(alpha:0.06)),
                   boxShadow: [
                     BoxShadow(
                       blurRadius: 24,
                       spreadRadius: 0,
-                      color: Colors.black.withOpacity(0.35),
+                      color: Colors.black.withValues(alpha:0.35),
                       offset: const Offset(0, 12),
                     ),
                   ],
@@ -170,7 +170,7 @@ class _IngresosChartScreenState extends ConsumerState<IngresosChartScreen> {
                     const SizedBox(height: 4),
                     Text(
                       'Solo trabajos marcados como Listo con monto.',
-                      style: TextStyle(color: Colors.white.withOpacity(0.65)),
+                      style: TextStyle(color: Colors.white.withValues(alpha:0.65)),
                     ),
                     const SizedBox(height: 12),
 
@@ -186,7 +186,7 @@ class _IngresosChartScreenState extends ConsumerState<IngresosChartScreen> {
                             drawVerticalLine: false,
                             horizontalInterval: chartMaxY / 4.0,
                             getDrawingHorizontalLine: (v) => FlLine(
-                              color: Colors.white.withOpacity(0.06),
+                              color: Colors.white.withValues(alpha:0.06),
                               strokeWidth: 1,
                             ),
                           ),
@@ -207,7 +207,7 @@ class _IngresosChartScreenState extends ConsumerState<IngresosChartScreen> {
                                     child: Text(
                                       _fmtCrcCompact(value),
                                       style: TextStyle(
-                                        color: Colors.white.withOpacity(0.65),
+                                        color: Colors.white.withValues(alpha:0.65),
                                         fontSize: 10,
                                       ),
                                     ),
@@ -242,7 +242,7 @@ class _IngresosChartScreenState extends ConsumerState<IngresosChartScreen> {
                                     child: Text(
                                       names[m],
                                       style: TextStyle(
-                                        color: Colors.white.withOpacity(0.75),
+                                        color: Colors.white.withValues(alpha:0.75),
                                         fontSize: 10,
                                         fontWeight: FontWeight.w700,
                                       ),
@@ -298,8 +298,8 @@ class _IngresosChartScreenState extends ConsumerState<IngresosChartScreen> {
                                   begin: Alignment.topCenter,
                                   end: Alignment.bottomCenter,
                                   colors: [
-                                    const Color(0xFF2DD4BF).withOpacity(0.30),
-                                    const Color(0xFF2DD4BF).withOpacity(0.02),
+                                    const Color(0xFF2DD4BF).withValues(alpha:0.30),
+                                    const Color(0xFF2DD4BF).withValues(alpha:0.02),
                                   ],
                                 ),
                               ),
@@ -317,7 +317,7 @@ class _IngresosChartScreenState extends ConsumerState<IngresosChartScreen> {
                         Text(
                           'Ingresos (₡) por mes',
                           style: TextStyle(
-                            color: Colors.white.withOpacity(0.75),
+                            color: Colors.white.withValues(alpha:0.75),
                             fontWeight: FontWeight.w700,
                           ),
                         ),
@@ -367,7 +367,7 @@ class _KpiRow extends StatelessWidget {
   Color _deltaColor(double pct) {
     if (pct > 0) return const Color(0xFF22C55E);
     if (pct < 0) return const Color(0xFFEF4444);
-    return Colors.white.withOpacity(0.65);
+    return Colors.white.withValues(alpha:0.65);
   }
 
   String _deltaText(double pct) {
@@ -451,7 +451,7 @@ class _KpiCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: const Color(0xFF111827),
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: Colors.white.withOpacity(0.06)),
+        border: Border.all(color: Colors.white.withValues(alpha:0.06)),
       ),
       padding: const EdgeInsets.fromLTRB(12, 12, 12, 10),
       child: Column(
@@ -459,12 +459,12 @@ class _KpiCard extends StatelessWidget {
         children: [
           Row(
             children: [
-              Icon(icon, size: 18, color: Colors.white.withOpacity(0.8)),
+              Icon(icon, size: 18, color: Colors.white.withValues(alpha:0.8)),
               const SizedBox(width: 8),
               Text(
                 title,
                 style: TextStyle(
-                  color: Colors.white.withOpacity(0.75),
+                  color: Colors.white.withValues(alpha:0.75),
                   fontWeight: FontWeight.w900,
                 ),
               ),
@@ -484,7 +484,7 @@ class _KpiCard extends StatelessWidget {
           const SizedBox(height: 2),
           Text(
             subtitle,
-            style: TextStyle(color: Colors.white.withOpacity(0.60), fontSize: 10),
+            style: TextStyle(color: Colors.white.withValues(alpha:0.60), fontSize: 10),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
           ),
@@ -502,13 +502,13 @@ class _Badge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final bg = color.withOpacity(0.18);
+    final bg = color.withValues(alpha:0.18);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
         color: bg,
         borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: color.withOpacity(0.45)),
+        border: Border.all(color: color.withValues(alpha:0.45)),
       ),
       child: Text(
         text,
@@ -546,7 +546,7 @@ class _YearHeader extends StatelessWidget {
       decoration: BoxDecoration(
         color: const Color(0xFF111827),
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: Colors.white.withOpacity(0.06)),
+        border: Border.all(color: Colors.white.withValues(alpha:0.06)),
       ),
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
       child: Row(
@@ -554,13 +554,13 @@ class _YearHeader extends StatelessWidget {
           IconButton(
             onPressed: onPrev,
             icon: const Icon(Icons.chevron_left),
-            color: Colors.white.withOpacity(0.85),
+            color: Colors.white.withValues(alpha:0.85),
           ),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                Text('Año', style: TextStyle(color: Colors.white.withOpacity(0.65))),
+                Text('Año', style: TextStyle(color: Colors.white.withValues(alpha:0.65))),
                 const SizedBox(height: 2),
                 Text(
                   year.toString(),
@@ -576,13 +576,13 @@ class _YearHeader extends StatelessWidget {
           IconButton(
             onPressed: onNext,
             icon: const Icon(Icons.chevron_right),
-            color: Colors.white.withOpacity(0.85),
+            color: Colors.white.withValues(alpha:0.85),
           ),
           const SizedBox(width: 8),
           Column(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
-              Text('Total año', style: TextStyle(color: Colors.white.withOpacity(0.65))),
+              Text('Total año', style: TextStyle(color: Colors.white.withValues(alpha:0.65))),
               const SizedBox(height: 2),
               Text(
                 _fmtMoney(total),

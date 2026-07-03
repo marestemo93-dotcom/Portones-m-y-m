@@ -59,7 +59,7 @@ class JobsRepository {
       await _ensureAuth();
       final uid = FirebaseAuth.instance.currentUser?.uid;
 
-      final deviceId = await DeviceId.getOrCreate();
+      final deviceId = DeviceId.getOrCreate();
       final job = JobItem.fromMap(m);
 
       debugPrint(
@@ -159,7 +159,7 @@ class JobsRepository {
   Future<void> _markDirty(Map<String, dynamic> m, {bool? deleted}) async {
     _ensureSyncMap(m);
 
-    final deviceId = await DeviceId.getOrCreate();
+    final deviceId = DeviceId.getOrCreate();
     final now = DateTime.now();
 
     final current = SyncMeta.fromMap((m['sync'] as Map).cast<String, dynamic>());
@@ -362,7 +362,7 @@ class JobsRepository {
     final raw = _box.get(key, defaultValue: []) as List;
     final list = raw.map((e) => Map<String, dynamic>.from(e)).toList();
 
-    final deviceId = await DeviceId.getOrCreate();
+    final deviceId = DeviceId.getOrCreate();
 
     final job = JobItem(
       id: _uuid.v4(),

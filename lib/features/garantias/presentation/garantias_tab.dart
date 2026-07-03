@@ -185,7 +185,7 @@ class _GarantiasTabState extends ConsumerState<GarantiasTab> {
               child: Center(
                 child: Text(
                   'No hay garantías para mostrar.',
-                  style: TextStyle(color: Colors.white.withOpacity(0.65)),
+                  style: TextStyle(color: Colors.white.withValues(alpha:0.65)),
                 ),
               ),
             )
@@ -362,7 +362,7 @@ class _ProvinciaHeader extends StatelessWidget {
         Expanded(
           child: Text(provincia, style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 16)),
         ),
-        Text('$count', style: TextStyle(color: Colors.white.withOpacity(0.65), fontWeight: FontWeight.w800)),
+        Text('$count', style: TextStyle(color: Colors.white.withValues(alpha:0.65), fontWeight: FontWeight.w800)),
       ],
     );
   }
@@ -374,7 +374,7 @@ class _ProvinciaHeader extends StatelessWidget {
       decoration: BoxDecoration(
         color: c,
         shape: BoxShape.circle,
-        border: Border.all(color: Colors.white.withOpacity(0.18)),
+        border: Border.all(color: Colors.white.withValues(alpha:0.18)),
       ),
     );
   }
@@ -450,7 +450,7 @@ class _GarantiaTile extends StatelessWidget {
       decoration: BoxDecoration(
         color: c,
         shape: BoxShape.circle,
-        border: Border.all(color: Colors.white.withOpacity(0.18)),
+        border: Border.all(color: Colors.white.withValues(alpha:0.18)),
       ),
     );
   }

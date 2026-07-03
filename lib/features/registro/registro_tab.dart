@@ -411,7 +411,7 @@ class _RegistroTabState extends ConsumerState<RegistroTab> {
       decoration: BoxDecoration(
         color: c,
         shape: BoxShape.circle,
-        border: Border.all(color: Colors.white.withOpacity(0.18)),
+        border: Border.all(color: Colors.white.withValues(alpha:0.18)),
       ),
     );
   }

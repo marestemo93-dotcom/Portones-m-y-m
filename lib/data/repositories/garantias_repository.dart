@@ -2,6 +2,7 @@ import 'package:hive/hive.dart';
 import '../models/garantia_item.dart';
 import 'package:portones_mym/core/constants/hive_boxes.dart';
 import 'package:portones_mym/data/models/job_item.dart';
+import 'package:portones_mym/core/utils/location_colors.dart';
 
 class GarantiasRepository {
   final Box _box = Hive.box(kGarantiasBox);
@@ -62,32 +63,6 @@ class GarantiasRepository {
     }
     return out;
   }
-}
-
-/// ======================
-/// Helpers (provincia + meses)
-/// ======================
-
-String provinciaFromUbic(String? ubic) {
-  final t = (ubic ?? '').trim().toLowerCase();
-  if (t.isEmpty) return 'Sin ubicacion';
-
-  final norm = t
-      .replaceAll('á', 'a')
-      .replaceAll('é', 'e')
-      .replaceAll('í', 'i')
-      .replaceAll('ó', 'o')
-      .replaceAll('ú', 'u');
-
-  if (norm.contains('cartago')) return 'Cartago';
-  if (norm.contains('san jose') || norm.contains('sanjose')) return 'San Jose';
-  if (norm.contains('heredia')) return 'Heredia';
-  if (norm.contains('alajuela')) return 'Alajuela';
-  if (norm.contains('guanacaste')) return 'Guanacaste';
-  if (norm.contains('puntarenas')) return 'Puntarenas';
-  if (norm.contains('limon')) return 'Limon';
-
-  return 'Sin ubicacion';
 }
 
 DateTime addMonths(DateTime d, int months) {

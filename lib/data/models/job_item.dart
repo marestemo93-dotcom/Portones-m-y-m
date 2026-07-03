@@ -78,14 +78,14 @@ class JobItem {
   };
 
   static JobItem fromMap(Map map) {
-    DateTime _parseFecha(dynamic v) {
+    DateTime parseFecha(dynamic v) {
       if (v == null) return DateTime.now();
       if (v is DateTime) return v;
       if (v is int) return DateTime.fromMillisecondsSinceEpoch(v);
       return DateTime.parse(v.toString());
     }
 
-    int? _parseTimeMinutes(dynamic v) {
+    int? parseTimeMinutes(dynamic v) {
       if (v == null) return null;
       if (v is int) return v;
       if (v is num) return v.toInt();
@@ -100,8 +100,8 @@ class JobItem {
     return JobItem(
       id: (map['id'] ?? '').toString(),
       titulo: (map['titulo'] ?? '').toString(),
-      fecha: _parseFecha(map['fecha']),
-      timeMinutes: _parseTimeMinutes(map['timeMinutes']),
+      fecha: parseFecha(map['fecha']),
+      timeMinutes: parseTimeMinutes(map['timeMinutes']),
       clientPhoneKey: map['clientPhoneKey'] as String?,
       clientNameSnapshot: map['clientNameSnapshot'] as String?,
       locationSnapshot: map['locationSnapshot'] as String?,
@@ -142,14 +142,14 @@ class JobItem {
   }
 
   static JobItem fromFirestore(Map<String, dynamic> map) {
-    DateTime _parseFecha(dynamic v) {
+    DateTime parseFecha(dynamic v) {
       if (v == null) return DateTime.now();
       if (v is Timestamp) return v.toDate();
       if (v is DateTime) return v;
       return DateTime.parse(v.toString());
     }
 
-    int? _parseTimeMinutes(dynamic v) {
+    int? parseTimeMinutes(dynamic v) {
       if (v == null) return null;
       if (v is int) return v;
       if (v is num) return v.toInt();
@@ -164,8 +164,8 @@ class JobItem {
     return JobItem(
       id: (map['id'] ?? '').toString(),
       titulo: (map['titulo'] ?? '').toString(),
-      fecha: _parseFecha(map['fecha']),
-      timeMinutes: _parseTimeMinutes(map['timeMinutes']),
+      fecha: parseFecha(map['fecha']),
+      timeMinutes: parseTimeMinutes(map['timeMinutes']),
       clientPhoneKey: map['clientPhoneKey'] as String?,
       clientNameSnapshot: map['clientNameSnapshot'] as String?,
       locationSnapshot: map['locationSnapshot'] as String?,

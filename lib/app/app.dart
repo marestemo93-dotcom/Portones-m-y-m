@@ -12,8 +12,8 @@ import 'package:portones_mym/features/registro/registro_tab.dart';
 import 'package:portones_mym/features/garantias/presentation/garantias_tab.dart';
 import 'package:portones_mym/features/calendar/presentation/screens/calendar_home.dart';
 import 'package:portones_mym/features/clients/presentation/clients_tab.dart';
-import 'package:portones_mym/features/alarm/presentation/alarm_tab.dart';
 import 'package:portones_mym/core/navigation/nav_key.dart';
+import 'package:portones_mym/features/whatsapp/presentation/whatsapp_tab.dart';
 
 // ✅ realtime
 import 'package:portones_mym/core/sync/realtime_providers.dart';
@@ -164,7 +164,7 @@ class _SignInScreenState extends State<SignInScreen> {
                 Text(
                   'Tip: Usá la MISMA cuenta Google en los 2 celulares.',
                   textAlign: TextAlign.center,
-                  style: TextStyle(color: Colors.white.withOpacity(0.7)),
+                  style: TextStyle(color: Colors.white.withValues(alpha:0.7)),
                 ),
               ],
             ),
@@ -208,12 +208,12 @@ class HomeTabs extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final index = ref.watch(homeTabIndexProvider);
 
-    final pages = const [
+    const pages = [
       CalendarHome(),
-      AlarmTab(),
       ClientsTab(),
       RegistroTab(),
       GarantiasTab(),
+      WhatsappTab(),
     ];
 
     return Scaffold(
@@ -225,11 +225,14 @@ class HomeTabs extends ConsumerWidget {
         },
         destinations: const [
           NavigationDestination(icon: Icon(Icons.calendar_month), label: 'Calendario'),
-          NavigationDestination(icon: Icon(Icons.alarm), label: 'Alarma'),
           NavigationDestination(icon: Icon(Icons.people_alt), label: 'Clientes'),
           NavigationDestination(icon: Icon(Icons.list_alt), label: 'Registro'),
           NavigationDestination(icon: Icon(Icons.verified_user), label: 'Garantías'),
-        ],
+          NavigationDestination(
+            icon: Icon(Icons.chat, color: Color(0xFF25D366)),
+            label: 'WhatsApp',
+          ),
+          ],
       ),
     );
   }

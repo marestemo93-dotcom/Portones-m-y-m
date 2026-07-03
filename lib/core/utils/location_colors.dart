@@ -1,17 +1,49 @@
 import 'package:flutter/material.dart';
 
+const List<String> kProvinceOrder = [
+  'Cartago',
+  'San Jose',
+  'Heredia',
+  'Alajuela',
+  'Guanacaste',
+  'Puntarenas',
+  'Limon',
+  'Sin ubicacion',
+];
+
+String provinciaFromUbic(String? location) {
+  final loc = (location ?? '').trim().toLowerCase()
+      .replaceAll('á', 'a')
+      .replaceAll('é', 'e')
+      .replaceAll('í', 'i')
+      .replaceAll('ó', 'o')
+      .replaceAll('ú', 'u');
+
+  if (loc.isEmpty) return 'Sin ubicacion';
+  if (loc.contains('cartago')) return 'Cartago';
+  if (loc.contains('san jose') || loc.contains('sanjose')) return 'San Jose';
+  if (loc.contains('heredia')) return 'Heredia';
+  if (loc.contains('alajuela')) return 'Alajuela';
+  if (loc.contains('guanacaste')) return 'Guanacaste';
+  if (loc.contains('puntarenas')) return 'Puntarenas';
+  if (loc.contains('limon')) return 'Limon';
+
+  return 'Sin ubicacion';
+}
+
 Color colorForLocation(String? location) {
-  final loc = (location ?? '').trim().toLowerCase();
+  return colorForProvincia(provinciaFromUbic(location));
+}
 
-  if (loc.isEmpty) return Colors.grey;
-
-  if (loc.contains('cartago')) return Colors.blue;
-  if (loc.contains('san jose') || loc.contains('san josé')) return Colors.purple;
-  if (loc.contains('heredia')) return Colors.yellow;
-  if (loc.contains('alajuela')) return Colors.red;
-  if (loc.contains('limon') || loc.contains('limón')) return Colors.green;
-  if (loc.contains('guanacaste')) return Colors.white;
-  if (loc.contains('puntarenas')) return Colors.brown;
-
-  return Colors.grey;
+Color colorForProvincia(String prov) {
+  switch (prov) {
+    case 'Cartago': return Colors.blue;
+    case 'San Jose': return Colors.purple;
+    case 'Heredia': return Colors.yellow;
+    case 'Alajuela': return Colors.red;
+    case 'Limon': return Colors.green;
+    case 'Guanacaste': return Colors.white;
+    case 'Puntarenas': return Colors.brown;
+    default: return Colors.grey;
+  }
 }

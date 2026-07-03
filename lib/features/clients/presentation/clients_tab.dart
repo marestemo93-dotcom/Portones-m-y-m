@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:portones_mym/data/models/client_item.dart';
 import 'package:portones_mym/app/providers.dart';
+import 'package:portones_mym/core/utils/location_colors.dart';
 
 /* ==========================
    CLIENTES TAB (AGENDA APP)
@@ -28,43 +29,6 @@ class _ClientsTabState extends ConsumerState<ClientsTab> {
     'Limon',
     'Sin ubicacion',
   ];
-
-  String _provinceForLocation(String? location) {
-    final loc = (location ?? '').trim().toLowerCase();
-
-    if (loc.isEmpty) return 'Sin ubicacion';
-    if (loc.contains('cartago')) return 'Cartago';
-    if (loc.contains('san jose') || loc.contains('san josé')) return 'San Jose';
-    if (loc.contains('heredia')) return 'Heredia';
-    if (loc.contains('alajuela')) return 'Alajuela';
-    if (loc.contains('guanacaste')) return 'Guanacaste';
-    if (loc.contains('puntarenas')) return 'Puntarenas';
-    if (loc.contains('limon') || loc.contains('limón')) return 'Limon';
-
-    return 'Sin ubicacion';
-  }
-
-  Color _colorForProvince(String prov) {
-    switch (prov) {
-      case 'Cartago':
-        return Colors.blue;
-      case 'San Jose':
-        return Colors.purple;
-      case 'Heredia':
-        return Colors.yellow;
-      case 'Alajuela':
-        return Colors.red;
-      case 'Limon':
-        return Colors.green;
-      case 'Guanacaste':
-        return Colors.white;
-      case 'Puntarenas':
-        return Colors.brown;
-      case 'Sin ubicacion':
-      default:
-        return Colors.grey;
-    }
-  }
 
   Widget _dot(Color c, {double size = 10}) {
     return Container(
@@ -115,7 +79,7 @@ class _ClientsTabState extends ConsumerState<ClientsTab> {
                 };
 
                 for (final c in filtered) {
-                  final prov = _provinceForLocation(c.ubicacionTexto);
+                  final prov = provinciaFromUbic(c.ubicacionTexto);
                   (groups[prov] ??= <ClientItem>[]).add(c);
                 }
 
@@ -129,8 +93,7 @@ class _ClientsTabState extends ConsumerState<ClientsTab> {
                 for (final prov in _provinceOrder) {
                   final list = groups[prov] ?? const <ClientItem>[];
                   if (list.isEmpty) continue;
-
-                  final provColor = _colorForProvince(prov);
+                  final provColor =colorForProvincia(prov);
 
                   // Header provincia
                   children.add(

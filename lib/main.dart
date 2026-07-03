@@ -18,8 +18,10 @@ import 'package:portones_mym/core/services/notif_service.dart';
 // ✅ Firebase
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:flutter/foundation.dart';
 import 'firebase_options.dart';
+
+import 'package:portones_mym/core/services/push_notification_service.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 
 // ✅ Si ya tenés tu servicio de Google Sign-In, importalo:
 // import 'package:portones_mym/core/services/google_signin_service.dart';
@@ -70,6 +72,9 @@ Future<void> main() async {
     await GoogleSigninService.signIn(); // o linkWithCredential dentro del service
   }
   */
+
+  FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
+  await PushNotificationService.initialize();
 
   runApp(const ProviderScope(child: PortonesApp()));
 }

@@ -12,11 +12,20 @@ dependencies:
 
   just_audio: ^0.9.38
   fl_chart: ^0.66.2
+  image_picker: ^1.1.2
+  file_picker: ^8.0.7
+
+  http: ^1.2.2
+  path_provider: ^2.1.4
+  firebase_storage: ^11.7.7
+  firebase_messaging: ^14.7.10
 
   firebase_core: ^2.27.0
   firebase_auth: ^4.17.8
   cloud_firestore: ^4.15.8
   google_sign_in: ^6.2.1
+  flutter_sound: ^9.2.13
+  permission_handler: ^11.3.1
 
   # ✅ Seguridad
   local_auth: ^2.2.0
