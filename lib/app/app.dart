@@ -7,8 +7,9 @@ import 'package:firebase_auth/firebase_auth.dart';
 
 import 'package:portones_mym/app/providers.dart';
 import 'package:portones_mym/core/constants/app_constants.dart';
+import 'package:portones_mym/core/security/app_lock_gate.dart';
 
-import 'package:portones_mym/features/registro/registro_tab.dart';
+import 'package:portones_mym/features/registro/presentation/registro_tab.dart';
 import 'package:portones_mym/features/garantias/presentation/garantias_tab.dart';
 import 'package:portones_mym/features/calendar/presentation/screens/calendar_home.dart';
 import 'package:portones_mym/features/clients/presentation/clients_tab.dart';
@@ -51,7 +52,7 @@ class PortonesApp extends StatelessWidget {
         GlobalWidgetsLocalizations.delegate,
         GlobalCupertinoLocalizations.delegate,
       ],
-      home: const AuthGate(),
+      home: const AppLockGate(child: AuthGate()),
     );
   }
 }

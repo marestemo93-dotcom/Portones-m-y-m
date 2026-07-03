@@ -13,6 +13,8 @@ import 'package:portones_mym/core/constants/app_constants.dart';
 import 'package:portones_mym/core/constants/hive_boxes.dart';
 
 import 'package:portones_mym/app/app.dart';
+import 'package:portones_mym/core/security/encrypted_box.dart';
+import 'package:portones_mym/core/security/hive_key_service.dart';
 import 'package:portones_mym/core/services/notif_service.dart';
 
 // ✅ Firebase
@@ -59,10 +61,11 @@ Future<void> main() async {
   await initializeDateFormatting(kLocaleEs, null);
 
   await Hive.initFlutter();
-  await Hive.openBox(kJobsBox);
-  await Hive.openBox(kClientsBox);
-  await Hive.openBox(kGarantiasBox);
-  await Hive.openBox(kJobsTombBox);
+  final hiveCipher = HiveAesCipher(await HiveKeyService.getOrCreateKey());
+  await openEncryptedBox(kJobsBox, hiveCipher);
+  await openEncryptedBox(kClientsBox, hiveCipher);
+  await openEncryptedBox(kGarantiasBox, hiveCipher);
+  await openEncryptedBox(kJobsTombBox, hiveCipher);
 
   await NotifService.instance.init();
 

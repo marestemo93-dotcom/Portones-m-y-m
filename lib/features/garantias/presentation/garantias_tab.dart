@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
-import '../../../data/repositories/garantias_repository.dart'; // addMonths(...)
-import '../../../data/models/garantia_item.dart';
+import '../data/repositories/garantias_repository.dart'; // addMonths(...)
+import '../data/models/garantia_item.dart';
 import 'package:portones_mym/core/constants/app_constants.dart';
 import 'package:portones_mym/data/models/job_item.dart';
 import 'package:portones_mym/app/providers.dart';

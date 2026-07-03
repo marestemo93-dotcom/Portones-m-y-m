@@ -31,6 +31,7 @@ dependencies:
   local_auth: ^2.2.0
   shared_preferences: ^2.2.3
   local_auth_android: ^1.0.43
+  flutter_secure_storage: ^9.2.2
 
 
   # Localización en español

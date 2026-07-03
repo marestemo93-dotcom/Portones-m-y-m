@@ -2,7 +2,7 @@ import 'package:hive_flutter/hive_flutter.dart';
 
 import 'package:portones_mym/core/constants/hive_boxes.dart';
 import 'package:portones_mym/core/utils/formatters.dart';
-import 'package:portones_mym/data/models/client_item.dart';
+import 'package:portones_mym/features/clients/data/models/client_item.dart';
 
 class ClientsRepository {
   final _box = Hive.box(kClientsBox);

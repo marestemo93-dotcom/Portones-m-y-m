@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:portones_mym/data/models/client_item.dart';
+import 'package:portones_mym/features/clients/data/models/client_item.dart';
 import 'package:portones_mym/app/providers.dart';
 import 'package:portones_mym/core/utils/location_colors.dart';
 
@@ -18,17 +18,6 @@ class ClientsTab extends ConsumerStatefulWidget {
 
 class _ClientsTabState extends ConsumerState<ClientsTab> {
   String _q = '';
-
-  static const List<String> _provinceOrder = [
-    'Cartago',
-    'San Jose',
-    'Heredia',
-    'Alajuela',
-    'Guanacaste',
-    'Puntarenas',
-    'Limon',
-    'Sin ubicacion',
-  ];
 
   Widget _dot(Color c, {double size = 10}) {
     return Container(
@@ -75,7 +64,7 @@ class _ClientsTabState extends ConsumerState<ClientsTab> {
               builder: (context) {
                 // Agrupar por provincia (a partir de ubicacionTexto)
                 final Map<String, List<ClientItem>> groups = {
-                  for (final p in _provinceOrder) p: <ClientItem>[],
+                  for (final p in kProvinceOrder) p: <ClientItem>[],
                 };
 
                 for (final c in filtered) {
@@ -90,7 +79,7 @@ class _ClientsTabState extends ConsumerState<ClientsTab> {
 
                 final children = <Widget>[];
 
-                for (final prov in _provinceOrder) {
+                for (final prov in kProvinceOrder) {
                   final list = groups[prov] ?? const <ClientItem>[];
                   if (list.isEmpty) continue;
                   final provColor =colorForProvincia(prov);

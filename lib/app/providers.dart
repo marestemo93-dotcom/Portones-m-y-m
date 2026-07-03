@@ -1,8 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:portones_mym/data/repositories/jobs_repository.dart';
-import 'package:portones_mym/data/repositories/clients_repository.dart';
-import 'package:portones_mym/data/repositories/garantias_repository.dart';
+import 'package:portones_mym/features/clients/data/repositories/clients_repository.dart';
+import 'package:portones_mym/features/garantias/data/repositories/garantias_repository.dart';
 import 'package:portones_mym/core/utils/date_utils.dart';
 
 final homeTabIndexProvider = StateProvider<int>((ref) => 0);

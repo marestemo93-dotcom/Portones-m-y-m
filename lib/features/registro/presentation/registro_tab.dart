@@ -6,6 +6,7 @@ import 'package:hive_flutter/hive_flutter.dart';
 import 'ingresos_chart_screen.dart';
 import 'package:portones_mym/core/constants/app_constants.dart';
 import 'package:portones_mym/core/constants/hive_boxes.dart';
+import 'package:portones_mym/core/utils/formatters.dart';
 import 'package:portones_mym/data/models/job_item.dart';
 import 'package:portones_mym/features/calendar/presentation/screens/job_detail_screen.dart';
 import 'package:portones_mym/core/services/notif_service.dart';
@@ -23,11 +24,6 @@ class RegistroTab extends ConsumerStatefulWidget {
 class _RegistroTabState extends ConsumerState<RegistroTab> {
   String _q = '';
   RegFilter _filter = RegFilter.pending;
-
-  String _fmtCrc(double v) {
-    final f = NumberFormat.decimalPattern('es');
-    return '₡${f.format(v.round())}';
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -209,7 +205,7 @@ class _RegistroTabState extends ConsumerState<RegistroTab> {
                           final loc = (j.locationSnapshot ?? '').trim();
 
                           final montoStr = (j.isDone && j.montoCrc != null && j.montoCrc! > 0)
-                              ? ' • ${_fmtCrc(j.montoCrc!)}'
+                              ? ' • ${formatCrc(j.montoCrc!)}'
                               : '';
 
                           final prov = _provinciaFromUbic(j.locationSnapshot);

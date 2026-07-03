@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:intl/intl.dart';
 import 'package:portones_mym/app/providers.dart';
+import 'package:portones_mym/core/utils/formatters.dart';
 
 class IngresosChartScreen extends ConsumerStatefulWidget {
   const IngresosChartScreen({super.key});
@@ -205,7 +206,7 @@ class _IngresosChartScreenState extends ConsumerState<IngresosChartScreen> {
                                   return Padding(
                                     padding: const EdgeInsets.only(right: 8),
                                     child: Text(
-                                      _fmtCrcCompact(value),
+                                      formatCrcCompact(value),
                                       style: TextStyle(
                                         color: Colors.white.withValues(alpha:0.65),
                                         fontSize: 10,
@@ -333,11 +334,6 @@ class _IngresosChartScreenState extends ConsumerState<IngresosChartScreen> {
     );
   }
 
-  static String _fmtCrcCompact(double v) {
-    final n = NumberFormat.compact(locale: 'es');
-    return '₡${n.format(v)}';
-  }
-
   static String _cap(String s) => s.isEmpty ? s : s[0].toUpperCase() + s.substring(1);
 }
 
@@ -375,11 +371,6 @@ class _KpiRow extends StatelessWidget {
     return '$sign${pct.toStringAsFixed(0)}%';
   }
 
-  String _fmtMoney(double v) {
-    final n = NumberFormat.decimalPattern('es');
-    return '₡${n.format(v.round())}';
-  }
-
   @override
   Widget build(BuildContext context) {
     return SingleChildScrollView(
@@ -390,7 +381,7 @@ class _KpiRow extends StatelessWidget {
             width: 210,
             child: _KpiCard(
               title: 'Hoy',
-              value: _fmtMoney(ingresosHoy),
+              value: formatCrc(ingresosHoy),
               subtitle: 'Ingresos',
               icon: Icons.today,
             ),
@@ -400,8 +391,8 @@ class _KpiRow extends StatelessWidget {
             width: 210,
             child: _KpiCard(
               title: 'Semana',
-              value: _fmtMoney(ingresosSemana),
-              subtitle: 'vs ant. ${_fmtMoney(ingresosSemanaPrev)}',
+              value: formatCrc(ingresosSemana),
+              subtitle: 'vs ant. ${formatCrc(ingresosSemanaPrev)}',
               icon: Icons.calendar_view_week,
               trailing: _Badge(
                 text: _deltaText(pctSemana),
@@ -414,8 +405,8 @@ class _KpiRow extends StatelessWidget {
             width: 210,
             child: _KpiCard(
               title: 'Mes',
-              value: _fmtMoney(ingresosMes),
-              subtitle: 'vs ant. ${_fmtMoney(ingresosMesPrev)}',
+              value: formatCrc(ingresosMes),
+              subtitle: 'vs ant. ${formatCrc(ingresosMesPrev)}',
               icon: Icons.calendar_month,
               trailing: _Badge(
                 text: _deltaText(pctMes),
@@ -535,11 +526,6 @@ class _YearHeader extends StatelessWidget {
   final VoidCallback onNext;
   final double total;
 
-  String _fmtMoney(double v) {
-    final n = NumberFormat.decimalPattern('es');
-    return '₡${n.format(v.round())}';
-  }
-
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -585,7 +571,7 @@ class _YearHeader extends StatelessWidget {
               Text('Total año', style: TextStyle(color: Colors.white.withValues(alpha:0.65))),
               const SizedBox(height: 2),
               Text(
-                _fmtMoney(total),
+                formatCrc(total),
                 style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900),
               ),
             ],

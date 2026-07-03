@@ -1,0 +1,32 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Un usuario "real" inició sesión con Google. Los usuarios anónimos
+    // (creados automáticamente al abrir la app, antes del login) no cuentan
+    // como autenticados para datos sensibles del negocio.
+    function isRealUser() {
+      return request.auth != null
+        && request.auth.token.firebase.sign_in_provider != 'anonymous';
+    }
+
+    match /jobs/{jobId} {
+      allow read, delete: if isRealUser()
+        && request.auth.uid == resource.data.ownerUid;
+      allow update: if isRealUser()
+        && request.auth.uid == resource.data.ownerUid
+        && request.resource.data.ownerUid == resource.data.ownerUid;
+      allow create: if isRealUser()
+        && request.auth.uid == request.resource.data.ownerUid;
+    }
+    match /conversaciones/{document=**} {
+      allow read, write: if isRealUser();
+    }
+    match /config/{document=**} {
+      allow read, write: if isRealUser();
+    }
+    match /productos/{document=**} {
+      allow read: if true;
+      allow write: if isRealUser();
+    }
+  }
+}

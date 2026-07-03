@@ -1,0 +1,24 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    // Un usuario "real" inició sesión con Google. Los usuarios anónimos
+    // (creados automáticamente al abrir la app, antes del login) no pueden
+    // subir archivos.
+    function isRealUser() {
+      return request.auth != null
+        && request.auth.token.firebase.sign_in_provider != 'anonymous';
+    }
+
+    match /motores/{motorId}/{fileName} {
+      // Lectura pública: los links se comparten por WhatsApp a clientes
+      // que no tienen sesión en la app.
+      allow read: if true;
+      allow write: if isRealUser();
+    }
+
+    // Cualquier otra ruta queda cerrada por defecto.
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}
