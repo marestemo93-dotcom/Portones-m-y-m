@@ -38,7 +38,7 @@
         android:label="Portones m y m"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher"
-        android:allowBackup="false"
+        android:allowBackup="false">
 
         <activity
             android:name=".MainActivity"
