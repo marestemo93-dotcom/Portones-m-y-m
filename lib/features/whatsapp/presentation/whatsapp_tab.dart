@@ -11,6 +11,7 @@ import 'package:intl/intl.dart';
 import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:portones_mym/core/constants/bot_config.dart';
 import 'productos_screen.dart';
 import 'agendar_bottom_sheet.dart';
 
@@ -299,8 +300,8 @@ class _ChatScreenState extends State<ChatScreen> {
     _controller.clear();
     try {
       final response = await http.post(
-        Uri.parse('http://159.65.166.85:3000/enviar-texto-manual'),
-        headers: {'Content-Type': 'application/json'},
+        Uri.parse('$kBotBaseUrl/enviar-texto-manual'),
+        headers: {'Content-Type': 'application/json', 'X-Api-Key': kBotApiKey},
         body: jsonEncode({'telefono': widget.telefono, 'texto': texto}),
       );
       if (response.statusCode == 200) _scrollAbajo();
@@ -326,8 +327,8 @@ class _ChatScreenState extends State<ChatScreen> {
       final bytes = await picked.readAsBytes();
       final base64Img = base64Encode(bytes);
       final response = await http.post(
-        Uri.parse('http://159.65.166.85:3000/enviar-imagen'),
-        headers: {'Content-Type': 'application/json'},
+        Uri.parse('$kBotBaseUrl/enviar-imagen'),
+        headers: {'Content-Type': 'application/json', 'X-Api-Key': kBotApiKey},
         body: jsonEncode({'telefono': widget.telefono, 'imagenBase64': base64Img, 'mimeType': 'image/jpeg'}),
       );
       if (response.statusCode == 200) {
@@ -400,8 +401,8 @@ class _ChatScreenState extends State<ChatScreen> {
       final bytes = await File(_rutaGrabacion!).readAsBytes();
       final base64Audio = base64Encode(bytes);
       final response = await http.post(
-        Uri.parse('http://159.65.166.85:3000/enviar-audio'),
-        headers: {'Content-Type': 'application/json'},
+        Uri.parse('$kBotBaseUrl/enviar-audio'),
+        headers: {'Content-Type': 'application/json', 'X-Api-Key': kBotApiKey},
         body: jsonEncode({'telefono': widget.telefono, 'audioBase64': base64Audio}),
       );
       if (response.statusCode == 200) {
@@ -695,8 +696,8 @@ class _ProductosBottomSheetState extends State<_ProductosBottomSheet>
     setState(() => _enviando = true);
     try {
       final response = await http.post(
-        Uri.parse('http://159.65.166.85:3000/enviar-motores'),
-        headers: {'Content-Type': 'application/json'},
+        Uri.parse('$kBotBaseUrl/enviar-motores'),
+        headers: {'Content-Type': 'application/json', 'X-Api-Key': kBotApiKey},
         body: jsonEncode({'telefono': widget.telefono, 'motores': _seleccionados.toList()}),
       );
       if (response.statusCode == 200 && mounted) {
