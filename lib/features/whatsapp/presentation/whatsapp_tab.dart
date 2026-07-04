@@ -217,9 +217,9 @@ class _ConversacionTile extends StatelessWidget {
     final ultimo = historial.last as Map;
     final content = (ultimo['content'] ?? '').toString();
     final role = ultimo['role'] ?? '';
-    if (content.startsWith('[imagen:')) return role == 'assistant' ? '🤖 📷 Imagen' : '👤 📷 Imagen';
-    if (content.startsWith('[audio:')) return role == 'assistant' ? '🤖 🎵 Audio' : '👤 🎵 Audio';
-    final prefix = role == 'assistant' ? '🤖 ' : '👤 ';
+    if (content.startsWith('[imagen:')) return role == 'assistant' ? '⚙️ 📷 Imagen' : '👤 📷 Imagen';
+    if (content.startsWith('[audio:')) return role == 'assistant' ? '⚙️ 🎵 Audio' : '👤 🎵 Audio';
+    final prefix = role == 'assistant' ? '⚙️ ' : '👤 ';
     return '$prefix$content';
   }
 
@@ -1064,7 +1064,7 @@ class _BurbujaMensaje extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             Row(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
-              if (esBot) const Text('🤖 ', style: TextStyle(fontSize: 13)),
+              if (esBot) const Text('⚙️ ', style: TextStyle(fontSize: 13)),
               Flexible(child: Text(texto, style: const TextStyle(fontSize: 14, color: Colors.white))),
             ]),
             if (timestamp != null)
@@ -1127,7 +1127,7 @@ class _BurbujaVideo extends StatelessWidget {
           constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.65),
           decoration: BoxDecoration(color: esBot ? const Color(0xFF1E2A1E) : const Color(0xFF005C4B), borderRadius: BorderRadius.circular(16)),
           child: Row(mainAxisSize: MainAxisSize.min, children: [
-            if (esBot) const Text('🤖 ', style: TextStyle(fontSize: 13)),
+            if (esBot) const Text('⚙️ ', style: TextStyle(fontSize: 13)),
             const Icon(Icons.play_circle, color: Color(0xFF25D366), size: 32),
             const SizedBox(width: 8),
             const Text('Ver video', style: TextStyle(color: Colors.white70, fontSize: 13)),
@@ -1238,7 +1238,7 @@ class _BurbujaAudioState extends State<_BurbujaAudio> {
         ),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
           Row(mainAxisSize: MainAxisSize.min, children: [
-            if (widget.esBot) const Text('🤖 ', style: TextStyle(fontSize: 13)),
+            if (widget.esBot) const Text('⚙️ ', style: TextStyle(fontSize: 13)),
             _loading
                 ? const SizedBox(width: 32, height: 32, child: CircularProgressIndicator(strokeWidth: 2))
                 : IconButton(icon: Icon(_playing ? Icons.pause_circle : Icons.play_circle, color: const Color(0xFF25D366), size: 32), onPressed: _togglePlay, padding: EdgeInsets.zero),
