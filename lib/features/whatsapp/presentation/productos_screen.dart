@@ -262,6 +262,7 @@ class _AgregarProductoScreenState extends State<AgregarProductoScreen> {
   final _videoCtrl    = TextEditingController();
   final _ordenCtrl    = TextEditingController();
   String _categoria   = 'motor';
+  final List<TextEditingController> _kitCtrls = [TextEditingController()];
   File? _imagenFile;
   bool _guardando     = false;
 
@@ -276,7 +277,23 @@ class _AgregarProductoScreenState extends State<AgregarProductoScreen> {
     _idCtrl.dispose(); _nombreCtrl.dispose(); _precioCtrl.dispose();
     _garantiaCtrl.dispose(); _notaCtrl.dispose(); _videoCtrl.dispose();
     _ordenCtrl.dispose();
+    for (final c in _kitCtrls) { c.dispose(); }
     super.dispose();
+  }
+
+  void _onKitFieldChanged(int i, String value) {
+    final esUltimo = i == _kitCtrls.length - 1;
+    if (esUltimo && value.trim().isNotEmpty) {
+      setState(() => _kitCtrls.add(TextEditingController()));
+    }
+  }
+
+  void _eliminarKitCampo(int i) {
+    setState(() {
+      _kitCtrls[i].dispose();
+      _kitCtrls.removeAt(i);
+      if (_kitCtrls.isEmpty) _kitCtrls.add(TextEditingController());
+    });
   }
 
   Future<void> _seleccionarImagen() async {
@@ -313,6 +330,9 @@ class _AgregarProductoScreenState extends State<AgregarProductoScreen> {
         'mediaImagen': imagenUrl ?? '',
         'mediaVideo':  _videoCtrl.text.trim(),
         'categoria':   _categoria,
+        'kit':         _categoria == 'motor'
+            ? _kitCtrls.map((c) => c.text.trim()).where((s) => s.isNotEmpty).toList()
+            : [],
         'activo':      true,
         'orden':       orden,
       });
@@ -404,6 +424,29 @@ class _AgregarProductoScreenState extends State<AgregarProductoScreen> {
             _campo(_garantiaCtrl, hint: 'Ej: 1 año'),
             const SizedBox(height: 12),
 
+            if (_categoria == 'motor') ...[
+              _label('Kit incluye'),
+              for (var i = 0; i < _kitCtrls.length; i++)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 6),
+                  child: Row(
+                    children: [
+                      const Text('•  ', style: TextStyle(color: Colors.white54, fontSize: 16)),
+                      Expanded(
+                        child: _campo(_kitCtrls[i],
+                            hint: 'Ej: 2 controles para carro',
+                            onChanged: (v) => _onKitFieldChanged(i, v)),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.close, color: Colors.redAccent, size: 18),
+                        onPressed: () => _eliminarKitCampo(i),
+                      ),
+                    ],
+                  ),
+                ),
+              const SizedBox(height: 6),
+            ],
+
             _label('Nota (opcional)'),
             _campo(_notaCtrl, hint: 'Ej: Compatible con todos los motores'),
             const SizedBox(height: 12),
@@ -450,11 +493,13 @@ class _AgregarProductoScreenState extends State<AgregarProductoScreen> {
     child: Text(texto, style: const TextStyle(color: Colors.white54, fontSize: 12, fontWeight: FontWeight.w500)),
   );
 
-  Widget _campo(TextEditingController ctrl, {String? hint, TextInputType tipo = TextInputType.text}) => TextField(
+  Widget _campo(TextEditingController ctrl, {String? hint, TextInputType tipo = TextInputType.text, ValueChanged<String>? onChanged}) => TextField(
     controller: ctrl,
     keyboardType: tipo,
+    onChanged: onChanged,
     decoration: InputDecoration(
       hintText: hint,
+      hintStyle: const TextStyle(color: Colors.white38),
       filled: true,
       fillColor: Colors.white10,
       border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
@@ -482,6 +527,7 @@ class _EditarProductoScreenState extends State<EditarProductoScreen> {
   late TextEditingController _notaCtrl;
   late TextEditingController _videoCtrl;
   late String _categoria;
+  late List<TextEditingController> _kitCtrls;
   File? _imagenFile;
   bool _guardando = false;
 
@@ -494,13 +540,34 @@ class _EditarProductoScreenState extends State<EditarProductoScreen> {
     _notaCtrl     = TextEditingController(text: widget.data['nota'] ?? '');
     _videoCtrl    = TextEditingController(text: widget.data['mediaVideo'] ?? '');
     _categoria    = widget.data['categoria'] ?? 'motor';
+    final kitGuardado = List<String>.from(widget.data['kit'] ?? []);
+    _kitCtrls = [
+      ...kitGuardado.map((s) => TextEditingController(text: s)),
+      TextEditingController(),
+    ];
   }
 
   @override
   void dispose() {
     _nombreCtrl.dispose(); _precioCtrl.dispose(); _garantiaCtrl.dispose();
     _notaCtrl.dispose(); _videoCtrl.dispose();
+    for (final c in _kitCtrls) { c.dispose(); }
     super.dispose();
+  }
+
+  void _onKitFieldChanged(int i, String value) {
+    final esUltimo = i == _kitCtrls.length - 1;
+    if (esUltimo && value.trim().isNotEmpty) {
+      setState(() => _kitCtrls.add(TextEditingController()));
+    }
+  }
+
+  void _eliminarKitCampo(int i) {
+    setState(() {
+      _kitCtrls[i].dispose();
+      _kitCtrls.removeAt(i);
+      if (_kitCtrls.isEmpty) _kitCtrls.add(TextEditingController());
+    });
   }
 
   Future<void> _seleccionarImagen() async {
@@ -529,6 +596,9 @@ class _EditarProductoScreenState extends State<EditarProductoScreen> {
         'nota':      _notaCtrl.text.trim(),
         'mediaVideo': _videoCtrl.text.trim(),
         'categoria': _categoria,
+        'kit':       _categoria == 'motor'
+            ? _kitCtrls.map((c) => c.text.trim()).where((s) => s.isNotEmpty).toList()
+            : [],
         if (imagenUrl != null) 'mediaImagen': imagenUrl,
       };
 
@@ -646,6 +716,29 @@ class _EditarProductoScreenState extends State<EditarProductoScreen> {
             _campo(_garantiaCtrl),
             const SizedBox(height: 12),
 
+            if (_categoria == 'motor') ...[
+              _label('Kit incluye'),
+              for (var i = 0; i < _kitCtrls.length; i++)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 6),
+                  child: Row(
+                    children: [
+                      const Text('•  ', style: TextStyle(color: Colors.white54, fontSize: 16)),
+                      Expanded(
+                        child: _campo(_kitCtrls[i],
+                            hint: 'Ej: 2 controles para carro',
+                            onChanged: (v) => _onKitFieldChanged(i, v)),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.close, color: Colors.redAccent, size: 18),
+                        onPressed: () => _eliminarKitCampo(i),
+                      ),
+                    ],
+                  ),
+                ),
+              const SizedBox(height: 6),
+            ],
+
             _label('Nota (opcional)'),
             _campo(_notaCtrl),
             const SizedBox(height: 12),
@@ -697,11 +790,13 @@ class _EditarProductoScreenState extends State<EditarProductoScreen> {
     child: Text(texto, style: const TextStyle(color: Colors.white54, fontSize: 12, fontWeight: FontWeight.w500)),
   );
 
-  Widget _campo(TextEditingController ctrl, {String? hint, TextInputType tipo = TextInputType.text}) => TextField(
+  Widget _campo(TextEditingController ctrl, {String? hint, TextInputType tipo = TextInputType.text, ValueChanged<String>? onChanged}) => TextField(
     controller: ctrl,
     keyboardType: tipo,
+    onChanged: onChanged,
     decoration: InputDecoration(
       hintText: hint,
+      hintStyle: const TextStyle(color: Colors.white38),
       filled: true,
       fillColor: Colors.white10,
       border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
