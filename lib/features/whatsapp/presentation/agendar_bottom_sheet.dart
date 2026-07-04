@@ -6,6 +6,7 @@ import 'package:intl/intl.dart';
 import 'package:table_calendar/table_calendar.dart';
 import 'package:uuid/uuid.dart';
 import 'package:portones_mym/core/services/job_notif_service.dart';
+import 'package:portones_mym/features/clients/data/repositories/clients_repository.dart';
 
 class AgendarBottomSheet extends StatefulWidget {
   const AgendarBottomSheet({
@@ -157,6 +158,12 @@ class _AgendarBottomSheetState extends State<AgendarBottomSheet> {
           'version':      1,
         },
       });
+
+      await ClientsRepository().upsert(
+        nombre: widget.nombreCliente,
+        telefono: widget.telefono,
+        ubicacionTexto: widget.provinciaCliente ?? '',
+      );
 
       final body = (widget.provinciaCliente != null && widget.provinciaCliente!.trim().isNotEmpty)
           ? widget.provinciaCliente!.trim()
