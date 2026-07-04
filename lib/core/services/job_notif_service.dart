@@ -19,6 +19,14 @@ class JobNotifService {
     if (_inited) return;
 
     tz.initializeTimeZones();
+    // initializeTimeZones() resetea tz.local a UTC cada vez que se llama,
+    // asi que hay que refijar la zona horaria local despues, sin depender
+    // de que NotifService.init() ya haya corrido antes.
+    try {
+      tz.setLocalLocation(tz.getLocation('America/Costa_Rica'));
+    } catch (_) {
+      tz.setLocalLocation(tz.getLocation('UTC'));
+    }
 
     const android = AndroidInitializationSettings('@mipmap/ic_launcher');
     const ios = DarwinInitializationSettings();

@@ -5,6 +5,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:intl/intl.dart';
 import 'package:table_calendar/table_calendar.dart';
 import 'package:uuid/uuid.dart';
+import 'package:portones_mym/core/services/job_notif_service.dart';
 
 class AgendarBottomSheet extends StatefulWidget {
   const AgendarBottomSheet({
@@ -141,7 +142,7 @@ class _AgendarBottomSheetState extends State<AgendarBottomSheet> {
         'deleted':             false,
         'doneAtIso':           null,
         'nextVisitIso':        null,
-        'timeMinutes':         null,
+        'timeMinutes':         _hora.hour * 60 + _hora.minute,
         'deviceId':            'app_${ahora.millisecondsSinceEpoch}',
         'createdAtMs':         ahora.millisecondsSinceEpoch,
         'updatedAtMs':         ahora.millisecondsSinceEpoch,
@@ -156,6 +157,18 @@ class _AgendarBottomSheetState extends State<AgendarBottomSheet> {
           'version':      1,
         },
       });
+
+      final body = (widget.provinciaCliente != null && widget.provinciaCliente!.trim().isNotEmpty)
+          ? widget.provinciaCliente!.trim()
+          : widget.nombreCliente.trim();
+
+      await JobNotifService.scheduleCascade(
+        jobId: id,
+        titulo: _tituloCtrl.text.trim(),
+        day: _diaSeleccionado,
+        timeMinutes: _hora.hour * 60 + _hora.minute,
+        body: body,
+      );
 
       if (mounted) {
         Navigator.pop(context);

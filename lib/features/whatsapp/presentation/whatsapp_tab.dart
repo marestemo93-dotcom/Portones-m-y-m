@@ -259,14 +259,15 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
   DateTime? _inicioGrabacion;
   Timer? _grabTimer;
 
-  late final AnimationController _pulseController = AnimationController(
-    vsync: this,
-    duration: const Duration(milliseconds: 900),
-  );
+  late final AnimationController _pulseController;
 
   @override
   void initState() {
     super.initState();
+    _pulseController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 900),
+    );
     _iniciarRecorder();
   }
 
