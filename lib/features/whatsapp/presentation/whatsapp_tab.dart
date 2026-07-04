@@ -254,6 +254,9 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
   final _recorder = FlutterSoundRecorder();
   bool _enviando = false;
   bool _grabando = false;
+  bool _grabacionBloqueada = false;
+  static const double _umbralCancelar = -80;
+  static const double _umbralBloquear = -60;
   bool _recorderIniciado = false;
   String? _rutaGrabacion;
   DateTime? _inicioGrabacion;
@@ -311,10 +314,28 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
   }
 
   Future<void> _toggleModoManual(bool actual) async {
-    await FirebaseFirestore.instance
-        .collection('conversaciones')
-        .doc(widget.telefono)
-        .update({'modoManual': !actual});
+    final ref = FirebaseFirestore.instance.collection('conversaciones').doc(widget.telefono);
+
+    if (!actual) {
+      // Se está ACTIVANDO manual (humano toma la conversación): corta el
+      // flujo automático del bot ahí mismo, sin importar en que paso estaba.
+      await ref.update({'modoManual': true, 'estado': 'modo_manual'});
+      return;
+    }
+
+    // Se está DESACTIVANDO manual (reactivar el bot): resetea el estado
+    // interno del bot en el servidor. Los strings deben coincidir
+    // exactamente con ESTADOS en bot.js.
+    final doc = await ref.get();
+    final data = doc.data() ?? {};
+    final tieneNombreYProvincia =
+        ((data['nombreCliente'] as String?)?.trim().isNotEmpty ?? false) &&
+        ((data['provinciaCliente'] as String?)?.trim().isNotEmpty ?? false);
+
+    await ref.update({
+      'modoManual': false,
+      'estado': tieneNombreYProvincia ? 'reactivado' : 'esperando_nombre',
+    });
   }
 
   Future<void> _enviarTexto(String texto) async {
@@ -425,7 +446,44 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
     _inicioGrabacion = DateTime.now();
     _pulseController.repeat(reverse: true);
     _grabTimer = Timer.periodic(const Duration(seconds: 1), (_) => setState(() {}));
-    setState(() => _grabando = true);
+    setState(() {
+      _grabando = true;
+      _grabacionBloqueada = false;
+    });
+  }
+
+  void _onGrabacionMove(LongPressMoveUpdateDetails details) {
+    if (!_grabando || _grabacionBloqueada) return;
+    final dx = details.offsetFromOrigin.dx;
+    final dy = details.offsetFromOrigin.dy;
+
+    if (dx < _umbralCancelar) {
+      _cancelarGrabacion();
+      return;
+    }
+    if (dy < _umbralBloquear) {
+      setState(() => _grabacionBloqueada = true);
+    }
+  }
+
+  Future<void> _cancelarGrabacion() async {
+    await _recorder.stopRecorder();
+    _pulseController.stop();
+    _pulseController.reset();
+    _grabTimer?.cancel();
+    _grabTimer = null;
+
+    final ruta = _rutaGrabacion;
+    _rutaGrabacion = null;
+    if (ruta != null) {
+      final f = File(ruta);
+      if (await f.exists()) await f.delete();
+    }
+
+    setState(() {
+      _grabando = false;
+      _grabacionBloqueada = false;
+    });
   }
 
   Future<void> _detenerYEnviarAudio() async {
@@ -434,7 +492,10 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
     _pulseController.reset();
     _grabTimer?.cancel();
     _grabTimer = null;
-    setState(() => _grabando = false);
+    setState(() {
+      _grabando = false;
+      _grabacionBloqueada = false;
+    });
     if (_rutaGrabacion == null) return;
     setState(() => _enviando = true);
     try {
@@ -497,12 +558,18 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
                           style: const TextStyle(fontSize: 16), maxLines: 1, overflow: TextOverflow.ellipsis),
                       Row(
                         children: [
-                          Text(_formatTelefono(widget.telefono),
-                              style: const TextStyle(fontSize: 12, color: Colors.white54)),
+                          Flexible(
+                            child: Text(_formatTelefono(widget.telefono),
+                                style: const TextStyle(fontSize: 12, color: Colors.white54),
+                                overflow: TextOverflow.ellipsis),
+                          ),
                           if ((widget.data['provinciaCliente'] ?? '').toString().isNotEmpty) ...[
                             const Text('  •  ', style: TextStyle(fontSize: 12, color: Colors.white38)),
-                            Text((widget.data['provinciaCliente'] ?? '').toString(),
-                                style: const TextStyle(fontSize: 12, color: Color(0xFF25D366))),
+                            Flexible(
+                              child: Text((widget.data['provinciaCliente'] ?? '').toString(),
+                                  style: const TextStyle(fontSize: 12, color: Color(0xFF25D366)),
+                                  overflow: TextOverflow.ellipsis),
+                            ),
                           ],
                         ],
                       ),
@@ -635,9 +702,20 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
                                     child: const Icon(Icons.fiber_manual_record, color: Colors.red, size: 16),
                                   ),
                                   const SizedBox(width: 10),
-                                  Text('Grabando...  ${_tiempoGrabacion()}', style: const TextStyle(color: Colors.white70)),
-                                  const Spacer(),
-                                  const Text('Soltá para enviar', style: TextStyle(color: Colors.white38, fontSize: 12)),
+                                  Flexible(
+                                    child: Text('Grabando...  ${_tiempoGrabacion()}',
+                                        style: const TextStyle(color: Colors.white70),
+                                        overflow: TextOverflow.ellipsis),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  if (_grabacionBloqueada)
+                                    const Icon(Icons.lock, color: Colors.white38, size: 16)
+                                  else
+                                    const Flexible(
+                                      child: Text('‹ Deslizá para cancelar',
+                                          style: TextStyle(color: Colors.white38, fontSize: 11),
+                                          overflow: TextOverflow.ellipsis),
+                                    ),
                                 ],
                               )
                             : TextField(
@@ -658,18 +736,53 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
                       // Enviar / Grabar
                       _enviando
                           ? const SizedBox(width: 44, height: 44, child: CircularProgressIndicator(strokeWidth: 2))
-                          : (_controller.text.isEmpty || _grabando)
-                          ? GestureDetector(
-                        onLongPressStart: (_) => _iniciarGrabacion(),
-                        onLongPressEnd: (_) => _detenerYEnviarAudio(),
-                        child: Container(
-                          width: 44, height: 44,
-                          decoration: BoxDecoration(
-                            color: _grabando ? Colors.red : (modoManual ? Colors.orange : const Color(0xFF25D366)),
-                            shape: BoxShape.circle,
+                          : (_grabando && _grabacionBloqueada)
+                          ? Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          IconButton(
+                            icon: const Icon(Icons.delete_outline, color: Colors.redAccent),
+                            tooltip: 'Cancelar audio',
+                            onPressed: _cancelarGrabacion,
                           ),
-                          child: Icon(_grabando ? Icons.stop : Icons.mic, color: Colors.black, size: 22),
-                        ),
+                          GestureDetector(
+                            onTap: _detenerYEnviarAudio,
+                            child: Container(
+                              width: 44, height: 44,
+                              decoration: const BoxDecoration(color: Color(0xFF25D366), shape: BoxShape.circle),
+                              child: const Icon(Icons.send, color: Colors.black, size: 20),
+                            ),
+                          ),
+                        ],
+                      )
+                          : (_controller.text.isEmpty || _grabando)
+                          ? Stack(
+                        clipBehavior: Clip.none,
+                        children: [
+                          if (_grabando)
+                            const Positioned(
+                              top: -32,
+                              left: 0,
+                              right: 0,
+                              child: Icon(Icons.lock_outline, color: Colors.white38, size: 20),
+                            ),
+                          GestureDetector(
+                            onLongPressStart: (_) => _iniciarGrabacion(),
+                            onLongPressMoveUpdate: _onGrabacionMove,
+                            onLongPressEnd: (_) {
+                              if (_grabacionBloqueada) return;
+                              _detenerYEnviarAudio();
+                            },
+                            child: Container(
+                              width: 44, height: 44,
+                              decoration: BoxDecoration(
+                                color: _grabando ? Colors.red : (modoManual ? Colors.orange : const Color(0xFF25D366)),
+                                shape: BoxShape.circle,
+                              ),
+                              child: Icon(_grabando ? Icons.stop : Icons.mic, color: Colors.black, size: 22),
+                            ),
+                          ),
+                        ],
                       )
                           : IconButton.filled(
                         style: IconButton.styleFrom(
