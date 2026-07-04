@@ -1,4 +1,5 @@
 // lib/features/whatsapp/presentation/whatsapp_tab.dart
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
@@ -246,7 +247,7 @@ class ChatScreen extends StatefulWidget {
   State<ChatScreen> createState() => _ChatScreenState();
 }
 
-class _ChatScreenState extends State<ChatScreen> {
+class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateMixin {
   final _controller = TextEditingController();
   final _scrollController = ScrollController();
   final _imagePicker = ImagePicker();
@@ -255,6 +256,13 @@ class _ChatScreenState extends State<ChatScreen> {
   bool _grabando = false;
   bool _recorderIniciado = false;
   String? _rutaGrabacion;
+  DateTime? _inicioGrabacion;
+  Timer? _grabTimer;
+
+  late final AnimationController _pulseController = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 900),
+  );
 
   @override
   void initState() {
@@ -263,6 +271,11 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   Future<void> _iniciarRecorder() async {
+    // Si el permiso todavia no esta concedido, no abrimos el grabador aca:
+    // se reintenta en _iniciarGrabacion cuando el usuario toque el boton
+    // (ahi si pedimos el permiso). Evita que openRecorder() falle en frio
+    // y deje _recorderIniciado en false para siempre.
+    if (!await Permission.microphone.status.isGranted) return;
     await _recorder.openRecorder();
     setState(() => _recorderIniciado = true);
   }
@@ -272,6 +285,8 @@ class _ChatScreenState extends State<ChatScreen> {
     _controller.dispose();
     _scrollController.dispose();
     _recorder.closeRecorder();
+    _pulseController.dispose();
+    _grabTimer?.cancel();
     super.dispose();
   }
 
@@ -287,6 +302,13 @@ class _ChatScreenState extends State<ChatScreen> {
     });
   }
 
+  String _tiempoGrabacion() {
+    final segundos = _inicioGrabacion == null ? 0 : DateTime.now().difference(_inicioGrabacion!).inSeconds;
+    final m = (segundos ~/ 60).toString().padLeft(2, '0');
+    final s = (segundos % 60).toString().padLeft(2, '0');
+    return '$m:$s';
+  }
+
   Future<void> _toggleModoManual(bool actual) async {
     await FirebaseFirestore.instance
         .collection('conversaciones')
@@ -300,11 +322,15 @@ class _ChatScreenState extends State<ChatScreen> {
     _controller.clear();
     try {
       final response = await http.post(
-        Uri.parse('$kBotBaseUrl/enviar-texto-manual'),
-        headers: {'Content-Type': 'application/json', 'X-Api-Key': kBotApiKey},
+        Uri.parse('${BotConfig.baseUrl}/enviar-texto-manual'),
+        headers: {'Content-Type': 'application/json', 'X-Api-Key': BotConfig.apiKey},
         body: jsonEncode({'telefono': widget.telefono, 'texto': texto}),
       );
-      if (response.statusCode == 200) _scrollAbajo();
+      if (response.statusCode == 200) {
+        _scrollAbajo();
+      } else {
+        throw Exception('HTTP ${response.statusCode}: ${response.body}');
+      }
     } catch (e) {
       final ref = FirebaseFirestore.instance.collection('conversaciones').doc(widget.telefono);
       final doc = await ref.get();
@@ -327,8 +353,8 @@ class _ChatScreenState extends State<ChatScreen> {
       final bytes = await picked.readAsBytes();
       final base64Img = base64Encode(bytes);
       final response = await http.post(
-        Uri.parse('$kBotBaseUrl/enviar-imagen'),
-        headers: {'Content-Type': 'application/json', 'X-Api-Key': kBotApiKey},
+        Uri.parse('${BotConfig.baseUrl}/enviar-imagen'),
+        headers: {'Content-Type': 'application/json', 'X-Api-Key': BotConfig.apiKey},
         body: jsonEncode({'telefono': widget.telefono, 'imagenBase64': base64Img, 'mimeType': 'image/jpeg'}),
       );
       if (response.statusCode == 200) {
@@ -342,6 +368,8 @@ class _ChatScreenState extends State<ChatScreen> {
         historial.add({'role': 'assistant', 'content': '[imagen:$storageUrl]', 'timestamp': DateTime.now().toIso8601String()});
         await ref.update({'historial': historial, 'ultimoContacto': FieldValue.serverTimestamp()});
         _scrollAbajo();
+      } else {
+        throw Exception('HTTP ${response.statusCode}: ${response.body}');
       }
     } catch (e) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
@@ -385,15 +413,26 @@ class _ChatScreenState extends State<ChatScreen> {
 
   Future<void> _iniciarGrabacion() async {
     final permiso = await Permission.microphone.request();
-    if (!permiso.isGranted || !_recorderIniciado) return;
+    if (!permiso.isGranted) return;
+    if (!_recorderIniciado) {
+      await _recorder.openRecorder();
+      setState(() => _recorderIniciado = true);
+    }
     final dir = await getTemporaryDirectory();
     _rutaGrabacion = '${dir.path}/audio_${DateTime.now().millisecondsSinceEpoch}.aac';
     await _recorder.startRecorder(toFile: _rutaGrabacion, codec: Codec.aacADTS);
+    _inicioGrabacion = DateTime.now();
+    _pulseController.repeat(reverse: true);
+    _grabTimer = Timer.periodic(const Duration(seconds: 1), (_) => setState(() {}));
     setState(() => _grabando = true);
   }
 
   Future<void> _detenerYEnviarAudio() async {
     await _recorder.stopRecorder();
+    _pulseController.stop();
+    _pulseController.reset();
+    _grabTimer?.cancel();
+    _grabTimer = null;
     setState(() => _grabando = false);
     if (_rutaGrabacion == null) return;
     setState(() => _enviando = true);
@@ -401,8 +440,8 @@ class _ChatScreenState extends State<ChatScreen> {
       final bytes = await File(_rutaGrabacion!).readAsBytes();
       final base64Audio = base64Encode(bytes);
       final response = await http.post(
-        Uri.parse('$kBotBaseUrl/enviar-audio'),
-        headers: {'Content-Type': 'application/json', 'X-Api-Key': kBotApiKey},
+        Uri.parse('${BotConfig.baseUrl}/enviar-audio'),
+        headers: {'Content-Type': 'application/json', 'X-Api-Key': BotConfig.apiKey},
         body: jsonEncode({'telefono': widget.telefono, 'audioBase64': base64Audio}),
       );
       if (response.statusCode == 200) {
@@ -416,6 +455,8 @@ class _ChatScreenState extends State<ChatScreen> {
         historial.add({'role': 'assistant', 'content': '[audio:$storageUrl]', 'timestamp': DateTime.now().toIso8601String()});
         await ref.update({'historial': historial, 'ultimoContacto': FieldValue.serverTimestamp()});
         _scrollAbajo();
+      } else {
+        throw Exception('HTTP ${response.statusCode}: ${response.body}');
       }
     } catch (e) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
@@ -567,23 +608,38 @@ class _ChatScreenState extends State<ChatScreen> {
                       // Imagen
                       IconButton(
                         icon: const Icon(Icons.image_outlined, color: Colors.white54),
-                        onPressed: _enviando ? null : _enviarImagen,
+                        onPressed: (_enviando || _grabando) ? null : _enviarImagen,
                       ),
                       // Calendario
                       IconButton(
                         icon: const Icon(Icons.calendar_today, color: Colors.white54),
                         tooltip: 'Agendar',
-                        onPressed: _enviando ? null : _abrirAgendarSheet,
+                        onPressed: (_enviando || _grabando) ? null : _abrirAgendarSheet,
                       ),
                       // Productos
                       IconButton(
                         icon: const Icon(Icons.settings, color: Color(0xFF25D366)),
                         tooltip: 'Enviar producto',
-                        onPressed: _enviando ? null : _abrirSelectorProductos,
+                        onPressed: (_enviando || _grabando) ? null : _abrirSelectorProductos,
                       ),
-                      // Campo de texto
+                      // Campo de texto / indicador de grabacion
                       Expanded(
-                        child: TextField(
+                        child: _grabando
+                            ? Row(
+                                children: [
+                                  ScaleTransition(
+                                    scale: Tween(begin: 0.8, end: 1.3).animate(
+                                      CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
+                                    ),
+                                    child: const Icon(Icons.fiber_manual_record, color: Colors.red, size: 16),
+                                  ),
+                                  const SizedBox(width: 10),
+                                  Text('Grabando...  ${_tiempoGrabacion()}', style: const TextStyle(color: Colors.white70)),
+                                  const Spacer(),
+                                  const Text('Soltá para enviar', style: TextStyle(color: Colors.white38, fontSize: 12)),
+                                ],
+                              )
+                            : TextField(
                           controller: _controller,
                           minLines: 1, maxLines: 4,
                           decoration: InputDecoration(
@@ -601,7 +657,7 @@ class _ChatScreenState extends State<ChatScreen> {
                       // Enviar / Grabar
                       _enviando
                           ? const SizedBox(width: 44, height: 44, child: CircularProgressIndicator(strokeWidth: 2))
-                          : _controller.text.isEmpty
+                          : (_controller.text.isEmpty || _grabando)
                           ? GestureDetector(
                         onLongPressStart: (_) => _iniciarGrabacion(),
                         onLongPressEnd: (_) => _detenerYEnviarAudio(),
@@ -696,15 +752,19 @@ class _ProductosBottomSheetState extends State<_ProductosBottomSheet>
     setState(() => _enviando = true);
     try {
       final response = await http.post(
-        Uri.parse('$kBotBaseUrl/enviar-motores'),
-        headers: {'Content-Type': 'application/json', 'X-Api-Key': kBotApiKey},
+        Uri.parse('${BotConfig.baseUrl}/enviar-motores'),
+        headers: {'Content-Type': 'application/json', 'X-Api-Key': BotConfig.apiKey},
         body: jsonEncode({'telefono': widget.telefono, 'motores': _seleccionados.toList()}),
       );
-      if (response.statusCode == 200 && mounted) {
-        Navigator.pop(context);
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('✅ Enviado'), backgroundColor: Color(0xFF25D366)),
-        );
+      if (response.statusCode == 200) {
+        if (mounted) {
+          Navigator.pop(context);
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('✅ Enviado'), backgroundColor: Color(0xFF25D366)),
+          );
+        }
+      } else {
+        throw Exception('HTTP ${response.statusCode}: ${response.body}');
       }
     } catch (e) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));

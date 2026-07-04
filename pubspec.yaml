@@ -83,6 +83,7 @@ flutter:
     - assets/brand/logo.png
     - assets/brand/icon.png
     - assets/alarm_loud.mp3
+    - assets/config/bot_secrets.json
 
 # ─────────────────────────────────────────────
 # ÍCONO (ANDROID)

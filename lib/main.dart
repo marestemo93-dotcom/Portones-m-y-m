@@ -13,6 +13,7 @@ import 'package:portones_mym/core/constants/app_constants.dart';
 import 'package:portones_mym/core/constants/hive_boxes.dart';
 
 import 'package:portones_mym/app/app.dart';
+import 'package:portones_mym/core/constants/bot_config.dart';
 import 'package:portones_mym/core/security/encrypted_box.dart';
 import 'package:portones_mym/core/security/hive_key_service.dart';
 import 'package:portones_mym/core/services/notif_service.dart';
@@ -30,6 +31,8 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  await BotConfig.load();
 
   // ✅ Inicializar Firebase ANTES de usar servicios/sync
   await Firebase.initializeApp(

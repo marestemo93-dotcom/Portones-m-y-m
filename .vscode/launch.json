@@ -5,8 +5,7 @@
       "name": "portones_mym",
       "request": "launch",
       "type": "dart",
-      "program": "lib/main.dart",
-      "args": ["--dart-define-from-file=dart_defines.json"]
+      "program": "lib/main.dart"
     }
   ]
 }
