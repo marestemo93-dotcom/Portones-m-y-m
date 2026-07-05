@@ -6,6 +6,8 @@ import 'package:intl/intl.dart';
 import 'package:table_calendar/table_calendar.dart';
 import 'package:uuid/uuid.dart';
 import 'package:portones_mym/core/services/job_notif_service.dart';
+import 'package:portones_mym/data/models/job_item.dart';
+import 'package:portones_mym/features/calendar/presentation/widgets/detalle_trabajo_editor.dart';
 import 'package:portones_mym/features/clients/data/repositories/clients_repository.dart';
 
 class AgendarBottomSheet extends StatefulWidget {
@@ -34,8 +36,12 @@ class _AgendarBottomSheetState extends State<AgendarBottomSheet> {
 
   // Formulario
   final _tituloCtrl = TextEditingController();
-  final _montoCtrl  = TextEditingController();
   TimeOfDay _hora   = const TimeOfDay(hour: 8, minute: 0);
+
+  List<DetalleTrabajoLinea> _lineas = [];
+  double? _descuentoValor;
+  String _descuentoTipo = 'monto';
+  double _total = 0;
 
   @override
   void initState() {
@@ -46,7 +52,6 @@ class _AgendarBottomSheetState extends State<AgendarBottomSheet> {
   @override
   void dispose() {
     _tituloCtrl.dispose();
-    _montoCtrl.dispose();
     super.dispose();
   }
 
@@ -128,7 +133,6 @@ class _AgendarBottomSheetState extends State<AgendarBottomSheet> {
         _hora.minute,
       );
       final ahora = DateTime.now();
-      final monto = int.tryParse(_montoCtrl.text.trim().replaceAll(',', '').replaceAll('.', ''));
 
       await FirebaseFirestore.instance.collection('jobs').doc(id).set({
         'id':                  id,
@@ -138,7 +142,10 @@ class _AgendarBottomSheetState extends State<AgendarBottomSheet> {
         'clientNameSnapshot':  widget.nombreCliente,
         'clientPhoneKey':      widget.telefono.replaceAll('+', '').replaceAll(' ', ''),
         'locationSnapshot':    widget.provinciaCliente ?? '',
-        'montoCrc':            monto,
+        'montoCrc':            _total > 0 ? _total : null,
+        'detalleTrabajo':      _lineas.map((l) => l.toMap()).toList(),
+        'descuentoValor':      _descuentoValor,
+        'descuentoTipo':       _descuentoTipo,
         'isDone':              false,
         'deleted':             false,
         'doneAtIso':           null,
@@ -402,25 +409,22 @@ class _AgendarBottomSheetState extends State<AgendarBottomSheet> {
                           ),
                         ),
                       ),
-                      const SizedBox(height: 12),
+                      const SizedBox(height: 20),
 
-                      // Monto
-                      const Text('Monto (opcional)',
-                          style: TextStyle(color: Colors.white54, fontSize: 12)),
-                      const SizedBox(height: 6),
-                      TextField(
-                        controller: _montoCtrl,
-                        keyboardType: TextInputType.number,
-                        decoration: InputDecoration(
-                          hintText: 'Ej: 195000',
-                          prefixText: '₡ ',
-                          filled: true,
-                          fillColor: Colors.white10,
-                          border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(10),
-                              borderSide: BorderSide.none),
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                        ),
+                      // Productos
+                      const Text('Productos',
+                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                      const SizedBox(height: 10),
+                      DetalleTrabajoEditor(
+                        lineasIniciales: _lineas,
+                        descuentoValorInicial: _descuentoValor,
+                        descuentoTipoInicial: _descuentoTipo,
+                        onChanged: (lineas, descuentoValor, descuentoTipo, total) {
+                          _lineas = lineas;
+                          _descuentoValor = descuentoValor;
+                          _descuentoTipo = descuentoTipo;
+                          _total = total;
+                        },
                       ),
                       const SizedBox(height: 24),
 

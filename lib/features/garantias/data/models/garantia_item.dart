@@ -12,6 +12,9 @@ class GarantiaItem {
   final int months;             // 3/6/12/24
   final DateTime expiresAt;     // fecha de vencimiento
 
+  final String? numeroGarantia; // No. de certificado (ej. "0101"), si ya se generó
+  final String? pdfUrl;         // URL del certificado en Firebase Storage
+
   GarantiaItem({
     required this.id,
     required this.jobId,
@@ -23,6 +26,8 @@ class GarantiaItem {
     this.clientName,
     this.phoneKey,
     this.location,
+    this.numeroGarantia,
+    this.pdfUrl,
   });
 
   Map<String, dynamic> toMap() => {
@@ -36,6 +41,8 @@ class GarantiaItem {
     'fechaTrabajo': fechaTrabajo.toIso8601String(),
     'months': months,
     'expiresAt': expiresAt.toIso8601String(),
+    'numeroGarantia': numeroGarantia,
+    'pdfUrl': pdfUrl,
   };
 
   static GarantiaItem fromMap(Map map) => GarantiaItem(
@@ -49,6 +56,8 @@ class GarantiaItem {
     fechaTrabajo: DateTime.parse(map['fechaTrabajo'] as String),
     months: (map['months'] as num).toInt(),
     expiresAt: DateTime.parse(map['expiresAt'] as String),
+    numeroGarantia: map['numeroGarantia'] as String?,
+    pdfUrl: map['pdfUrl'] as String?,
   );
 
   bool get isExpired {

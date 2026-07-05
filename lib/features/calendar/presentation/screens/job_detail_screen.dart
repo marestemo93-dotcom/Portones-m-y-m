@@ -8,7 +8,11 @@ import 'package:portones_mym/app/providers.dart';
 import 'package:portones_mym/core/constants/app_constants.dart';
 import 'package:portones_mym/data/models/job_item.dart';
 import 'package:portones_mym/core/services/notif_service.dart';
+import 'package:portones_mym/core/services/visita_cleanup_service.dart';
 import 'package:portones_mym/core/utils/date_utils.dart';
+import 'package:portones_mym/features/calendar/presentation/dialogs/certificado_garantia_flow.dart';
+import 'package:portones_mym/features/calendar/presentation/dialogs/visita_realizada_flow.dart';
+import 'package:portones_mym/features/calendar/presentation/widgets/detalle_trabajo_editor.dart';
 
 class JobDetailScreen extends ConsumerStatefulWidget {
   const JobDetailScreen({super.key, required this.day, required this.job});
@@ -27,9 +31,14 @@ class _JobDetailScreenState extends ConsumerState<JobDetailScreen> {
   late final TextEditingController _nameCtrl;
   late final TextEditingController _phoneCtrl;
   late final TextEditingController _locCtrl;
-  late final TextEditingController _montoCtrl;
 
   TimeOfDay? _pickedTime; // editable
+
+  late List<DetalleTrabajoLinea> _lineasIniciales;
+  List<DetalleTrabajoLinea> _lineas = [];
+  double? _descuentoValor;
+  String _descuentoTipo = 'monto';
+  double _total = 0;
 
   @override
   void initState() {
@@ -40,8 +49,20 @@ class _JobDetailScreenState extends ConsumerState<JobDetailScreen> {
     _nameCtrl = TextEditingController(text: _job.clientNameSnapshot ?? '');
     _phoneCtrl = TextEditingController(text: _job.clientPhoneKey ?? '');
     _locCtrl = TextEditingController(text: _job.locationSnapshot ?? '');
-    _montoCtrl = TextEditingController(text: _job.montoCrc?.toStringAsFixed(0) ?? '');
     _pickedTime = _job.timeOfDay;
+
+    // Trabajos viejos (de antes de este cambio) no tienen detalleTrabajo -
+    // se precarga una línea manual con el montoCrc actual para no perder
+    // ese dato.
+    _lineasIniciales = _job.detalleTrabajo.isNotEmpty
+        ? _job.detalleTrabajo
+        : (_job.montoCrc != null && _job.montoCrc! > 0)
+        ? [DetalleTrabajoLinea(nombre: _job.titulo, precio: _job.montoCrc!)]
+        : [];
+    _lineas = _lineasIniciales;
+    _descuentoValor = _job.descuentoValor;
+    _descuentoTipo = _job.descuentoTipo ?? 'monto';
+    _total = _job.montoCrc ?? 0;
   }
 
   @override
@@ -50,7 +71,6 @@ class _JobDetailScreenState extends ConsumerState<JobDetailScreen> {
     _nameCtrl.dispose();
     _phoneCtrl.dispose();
     _locCtrl.dispose();
-    _montoCtrl.dispose();
     super.dispose();
   }
 
@@ -166,15 +186,6 @@ class _JobDetailScreenState extends ConsumerState<JobDetailScreen> {
     // 2) hora -> minutes
     final minutes = _pickedTime == null ? null : (_pickedTime!.hour * 60 + _pickedTime!.minute);
 
-    // 3) monto (si vacío => borrar, si número => guardar)
-    final montoRaw = _montoCtrl.text.trim();
-    final montoNorm = montoRaw.replaceAll('₡', '').replaceAll(',', '').trim();
-
-    double? monto;
-    if (montoNorm.isNotEmpty) {
-      monto = double.tryParse(montoNorm);
-    }
-
     await jobsRepo.updateJobInDay(
       day: widget.day,
       id: _job.id,
@@ -184,9 +195,12 @@ class _JobDetailScreenState extends ConsumerState<JobDetailScreen> {
       clientNameSnapshot: _nameCtrl.text.trim().isEmpty ? _job.clientNameSnapshot : _nameCtrl.text.trim(),
       locationSnapshot: _locCtrl.text.trim().isEmpty ? _job.locationSnapshot : _locCtrl.text.trim(),
 
-      // ✅ monto
-      montoCrc: monto,
-      clearMonto: montoNorm.isEmpty, // si dejó vacío, lo borra
+      // ✅ monto = total del editor de productos/descuento
+      montoCrc: _total > 0 ? _total : null,
+      clearMonto: _total <= 0,
+      detalleTrabajo: _lineas,
+      descuentoValor: _descuentoValor,
+      descuentoTipo: _descuentoTipo,
     );
 
     await _reloadFromRepo();
@@ -304,6 +318,38 @@ class _JobDetailScreenState extends ConsumerState<JobDetailScreen> {
     nextWorkCtrl.dispose();
   }
 
+  /// Se dispara al marcar una Visita como "Realizada". Delega en
+  /// VisitaRealizadaFlow (compartido con el checkbox de la lista del día en
+  /// next_visit_flow.dart) para no duplicar la lógica.
+  Future<void> _onMarcarRealizada() async {
+    final completado = await VisitaRealizadaFlow.run(
+      context: context,
+      ref: ref,
+      day: widget.day,
+      visita: _job,
+    );
+    if (!completado) return;
+    if (!mounted) return;
+
+    await _reloadFromRepo();
+
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Visita marcada como realizada ✅')),
+      );
+    }
+  }
+
+  Future<void> _onGenerarCertificado() async {
+    await CertificadoGarantiaFlow.generarCertificado(
+      context: context,
+      ref: ref,
+      day: widget.day,
+      job: _job,
+    );
+    await _reloadFromRepo();
+  }
+
   @override
   Widget build(BuildContext context) {
     final jobsRepo = ref.read(jobsRepoProvider);
@@ -333,7 +379,16 @@ class _JobDetailScreenState extends ConsumerState<JobDetailScreen> {
             tooltip: 'Eliminar',
             icon: const Icon(Icons.delete_outline),
             onPressed: () async {
-              await jobsRepo.deleteJob(widget.day, _job.id);
+              if (_job.esVisita) {
+                await VisitaCleanupService.borrarVisitaYClienteSiHuerfano(
+                  jobsRepo: jobsRepo,
+                  clientsRepo: clientsRepo,
+                  garantiasRepo: ref.read(garantiasRepoProvider),
+                  visita: _job,
+                );
+              } else {
+                await jobsRepo.deleteJob(widget.day, _job.id);
+              }
               if (mounted) Navigator.pop(context);
             },
           ),
@@ -373,34 +428,35 @@ class _JobDetailScreenState extends ConsumerState<JobDetailScreen> {
                   const SizedBox(height: 12),
                   Text('Fecha: ${DateFormat.yMMMMd(kLocaleEs).format(_job.fecha)}'),
                   Text('Hora: $timeStr'),
-                  const SizedBox(height: 8),
-                  Text('Próxima visita: $nextVisitText', style: TextStyle(color: Colors.white.withValues(alpha:0.8))),
-                  const SizedBox(height: 10),
-
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      Expanded(
-                        child: Text(
-                          'Garantía: $garantiaText',
-                          style: TextStyle(color: Colors.white.withValues(alpha:0.8)),
+                  if (!_job.esVisita) ...[
+                    const SizedBox(height: 8),
+                    Text('Próxima visita: $nextVisitText', style: TextStyle(color: Colors.white.withValues(alpha:0.8))),
+                    const SizedBox(height: 10),
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        Expanded(
+                          child: Text(
+                            'Garantía: $garantiaText',
+                            style: TextStyle(color: Colors.white.withValues(alpha:0.8)),
+                          ),
                         ),
-                      ),
-                      if (garantia != null)
-                        OutlinedButton.icon(
-                          icon: const Icon(Icons.verified_user),
-                          label: const Text('Ver'),
-                          onPressed: () {
-                            // ✅ manda al tab Garantías y le dice cuál abrir
-                            ref.read(homeTabIndexProvider.notifier).state = 4; // tab 5
-                            ref.read(garantiaTargetJobIdProvider.notifier).state = _job.id;
+                        if (garantia != null)
+                          OutlinedButton.icon(
+                            icon: const Icon(Icons.verified_user),
+                            label: const Text('Ver'),
+                            onPressed: () {
+                              // ✅ manda al tab Garantías y le dice cuál abrir
+                              ref.read(homeTabIndexProvider.notifier).state = 4; // tab 5
+                              ref.read(garantiaTargetJobIdProvider.notifier).state = _job.id;
 
-                            // ✅ cerrar el detalle para ver el tab
-                            Navigator.pop(context);
-                          },
-                        ),
-                    ],
-                  ),
+                              // ✅ cerrar el detalle para ver el tab
+                              Navigator.pop(context);
+                            },
+                          ),
+                      ],
+                    ),
+                  ],
 
                   const Divider(height: 24),
 
@@ -410,7 +466,9 @@ class _JobDetailScreenState extends ConsumerState<JobDetailScreen> {
 
                   TextField(
                     controller: _workCtrl,
-                    decoration: const InputDecoration(labelText: 'Trabajo (ej: Mantenimiento)'),
+                    decoration: InputDecoration(
+                      labelText: _job.esVisita ? 'Motivo de la visita' : 'Trabajo (ej: Mantenimiento)',
+                    ),
                   ),
                   const SizedBox(height: 8),
 
@@ -444,14 +502,21 @@ class _JobDetailScreenState extends ConsumerState<JobDetailScreen> {
                   ),
                   const SizedBox(height: 8),
 
-                  TextField(
-                    controller: _montoCtrl,
-                    keyboardType: TextInputType.number,
-                    decoration: const InputDecoration(
-                      labelText: 'Monto (₡) (opcional)',
-                      hintText: 'Ej: 450000',
+                  if (!_job.esVisita) ...[
+                    const Text('Productos', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                    const SizedBox(height: 10),
+                    DetalleTrabajoEditor(
+                      lineasIniciales: _lineasIniciales,
+                      descuentoValorInicial: _descuentoValor,
+                      descuentoTipoInicial: _descuentoTipo,
+                      onChanged: (lineas, descuentoValor, descuentoTipo, total) {
+                        _lineas = lineas;
+                        _descuentoValor = descuentoValor;
+                        _descuentoTipo = descuentoTipo;
+                        _total = total;
+                      },
                     ),
-                  ),
+                  ],
 
                   const SizedBox(height: 12),
                   SizedBox(
@@ -499,57 +564,82 @@ class _JobDetailScreenState extends ConsumerState<JobDetailScreen> {
                           },
                         ),
                       ),
-                      SizedBox(
-                        width: double.infinity,
-                        child: FilledButton.icon(
-                          icon: const Icon(Icons.add),
-                          label: const Text('Próx visita'),
-                          onPressed: () async {
-                            final pickedDate = await _pickDate(
-                              context,
-                              initial: _job.fecha.add(const Duration(days: 30)),
-                            );
-                            if (pickedDate == null) return;
-
-                            final pickedTime = await _pickTime(
-                              context,
-                              initial: _pickedTime ?? (_job.timeOfDay ?? const TimeOfDay(hour: 9, minute: 0)),
-                            );
-                            final minutes = pickedTime == null ? null : (pickedTime.hour * 60 + pickedTime.minute);
-
-                            await jobsRepo.addJob(
-                              day: pickedDate,
-                              titulo: _workCtrl.text.trim().isEmpty ? _job.titulo : _workCtrl.text.trim(),
-                              timeMinutes: minutes,
-                              clientPhoneKey: _job.clientPhoneKey,
-                              clientNameSnapshot:
-                              _nameCtrl.text.trim().isEmpty ? _job.clientNameSnapshot : _nameCtrl.text.trim(),
-                              locationSnapshot:
-                              _locCtrl.text.trim().isEmpty ? _job.locationSnapshot : _locCtrl.text.trim(),
-                            );
-
-                            ref.read(selectedDayProvider.notifier).state = dayKey(pickedDate);
-
-                            if (mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(content: Text('Próxima visita creada ✅')),
-                              );
-                            }
-                          },
+                      if (!_job.esVisita && _job.isDone && _job.numeroGarantiaCertificado == null)
+                        SizedBox(
+                          width: double.infinity,
+                          child: OutlinedButton.icon(
+                            icon: const Icon(Icons.verified_user),
+                            label: const Text('Generar certificado'),
+                            onPressed: _onGenerarCertificado,
+                          ),
                         ),
-                      ),
+                      if (!_job.esVisita)
+                        SizedBox(
+                          width: double.infinity,
+                          child: FilledButton.icon(
+                            icon: const Icon(Icons.add),
+                            label: const Text('Próx visita'),
+                            onPressed: () async {
+                              final pickedDate = await _pickDate(
+                                context,
+                                initial: _job.fecha.add(const Duration(days: 30)),
+                              );
+                              if (pickedDate == null) return;
+
+                              final pickedTime = await _pickTime(
+                                context,
+                                initial: _pickedTime ?? (_job.timeOfDay ?? const TimeOfDay(hour: 9, minute: 0)),
+                              );
+                              final minutes = pickedTime == null ? null : (pickedTime.hour * 60 + pickedTime.minute);
+
+                              await jobsRepo.addJob(
+                                day: pickedDate,
+                                titulo: _workCtrl.text.trim().isEmpty ? _job.titulo : _workCtrl.text.trim(),
+                                timeMinutes: minutes,
+                                clientPhoneKey: _job.clientPhoneKey,
+                                clientNameSnapshot:
+                                _nameCtrl.text.trim().isEmpty ? _job.clientNameSnapshot : _nameCtrl.text.trim(),
+                                locationSnapshot:
+                                _locCtrl.text.trim().isEmpty ? _job.locationSnapshot : _locCtrl.text.trim(),
+                              );
+
+                              ref.read(selectedDayProvider.notifier).state = dayKey(pickedDate);
+
+                              if (mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(content: Text('Próxima visita creada ✅')),
+                                );
+                              }
+                            },
+                          ),
+                        ),
                     ],
                   ),
 
                   const SizedBox(height: 12),
 
-                  // ✅ CHECK “LISTO” con opciones 3/6/8/12/24 meses (NO CIERRA)
+                  // ✅ CHECK "LISTO" (Trabajo) / "REALIZADA" (Visita)
                   Row(
                     children: [
                       Checkbox(
                         value: _job.isDone,
                         activeColor: Colors.green,
                         onChanged: (v) async {
+                          if (_job.esVisita) {
+                            if (v == true) {
+                              await _onMarcarRealizada();
+                            } else {
+                              await jobsRepo.updateJobInDay(
+                                day: widget.day,
+                                id: _job.id,
+                                isDone: false,
+                                doneAtIso: null,
+                              );
+                              await _reloadFromRepo();
+                            }
+                            return;
+                          }
+
                           if ((_job.isDone == false) && (v == true)) {
                             await _showDoneScheduler();
                             return;
@@ -568,7 +658,7 @@ class _JobDetailScreenState extends ConsumerState<JobDetailScreen> {
                       ),
                       const SizedBox(width: 6),
                       Text(
-                        'Listo',
+                        _job.esVisita ? 'Realizada' : 'Listo',
                         style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w800,
@@ -588,7 +678,9 @@ class _JobDetailScreenState extends ConsumerState<JobDetailScreen> {
 
                   const SizedBox(height: 8),
                   Text(
-                    'Al marcar “Listo” te pregunta cada cuántos meses y crea la próxima visita en el calendario con nombre, teléfono, ubicación y el trabajo.',
+                    _job.esVisita
+                        ? 'Al marcar "Realizada" te pide una fecha nueva y abre el formulario de Trabajo con los datos de este cliente ya cargados. Si no se marca dentro de 24h de la hora agendada, la visita se borra automáticamente (y el cliente, si no tiene otro historial).'
+                        : 'Al marcar "Listo" te pregunta cada cuántos meses y crea la próxima visita en el calendario con nombre, teléfono, ubicación y el trabajo.',
                     textAlign: TextAlign.center,
                     style: TextStyle(color: Colors.white.withValues(alpha:0.65)),
                   ),

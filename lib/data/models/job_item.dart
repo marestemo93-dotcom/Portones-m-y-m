@@ -2,6 +2,48 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../core/sync/sync_meta.dart';
 
+/// Una línea de la tabla "Detalle del trabajo". Puede venir de un producto
+/// del catálogo (productoId != null, precio no editable en la UI) o ser una
+/// línea manual de texto libre (productoId == null).
+class DetalleTrabajoLinea {
+  final String? productoId;
+  final String nombre;
+  final String? categoria; // 'motor' / 'accesorio' / 'servicio', solo si viene de catálogo
+  final double precio;
+  final int cantidad;
+
+  DetalleTrabajoLinea({
+    this.productoId,
+    required this.nombre,
+    this.categoria,
+    required this.precio,
+    this.cantidad = 1,
+  });
+
+  double get total => precio * cantidad;
+
+  Map<String, dynamic> toMap() => {
+    'productoId': productoId,
+    'nombre': nombre,
+    'categoria': categoria,
+    'precio': precio,
+    'cantidad': cantidad,
+  };
+
+  static DetalleTrabajoLinea fromMap(Map map) => DetalleTrabajoLinea(
+    productoId: map['productoId'] as String?,
+    nombre: (map['nombre'] ?? '').toString(),
+    categoria: map['categoria'] as String?,
+    precio: (map['precio'] as num?)?.toDouble() ?? 0,
+    cantidad: (map['cantidad'] as num?)?.toInt() ?? 1,
+  );
+}
+
+/// 'trabajo' = flujo normal (con costo/productos). 'visita' = visita
+/// técnica previa sin costo, para cotizar.
+const String kTipoJobTrabajo = 'trabajo';
+const String kTipoJobVisita = 'visita';
+
 class JobItem {
   final String id;
   final String titulo;
@@ -14,8 +56,16 @@ class JobItem {
   final bool isDone;
   final String? doneAtIso;
   final String? nextVisitIso;
+  final String? numeroGarantiaCertificado;
 
   final double? montoCrc;
+
+  final List<DetalleTrabajoLinea> detalleTrabajo;
+  final double? descuentoValor;
+  final String? descuentoTipo; // 'monto' | 'porcentaje'
+
+  final String tipo; // kTipoJobTrabajo | kTipoJobVisita
+  final String? motivoVisita; // solo aplica si tipo == kTipoJobVisita
 
   /// Metadata de sincronización
   final SyncMeta sync;
@@ -31,13 +81,21 @@ class JobItem {
     this.isDone = false,
     this.doneAtIso,
     this.nextVisitIso,
+    this.numeroGarantiaCertificado,
     this.montoCrc,
+    this.detalleTrabajo = const [],
+    this.descuentoValor,
+    this.descuentoTipo,
+    this.tipo = kTipoJobTrabajo,
+    this.motivoVisita,
     SyncMeta? sync,
   }) : sync = sync ?? SyncMeta.legacy();
 
   // =========================================================
   // UI HELPERS
   // =========================================================
+
+  bool get esVisita => tipo == kTipoJobVisita;
 
   TimeOfDay? get timeOfDay {
     if (timeMinutes == null) return null;
@@ -70,12 +128,26 @@ class JobItem {
     'isDone': isDone,
     'doneAtIso': doneAtIso,
     'nextVisitIso': nextVisitIso,
+    'numeroGarantiaCertificado': numeroGarantiaCertificado,
     'montoCrc': montoCrc,
+    'detalleTrabajo': detalleTrabajo.map((d) => d.toMap()).toList(),
+    'descuentoValor': descuentoValor,
+    'descuentoTipo': descuentoTipo,
+    'tipo': tipo,
+    'motivoVisita': motivoVisita,
     'sync': sync.toMap(),
     'updatedAtMs': sync.updatedAt.millisecondsSinceEpoch,
     'createdAtMs': sync.createdAt.millisecondsSinceEpoch,
     'deleted': sync.isDeleted,
   };
+
+  static List<DetalleTrabajoLinea> _parseDetalle(dynamic v) {
+    if (v is! List) return const [];
+    return v
+        .whereType<Object>()
+        .map((e) => DetalleTrabajoLinea.fromMap(Map<String, dynamic>.from(e as Map)))
+        .toList();
+  }
 
   static JobItem fromMap(Map map) {
     DateTime parseFecha(dynamic v) {
@@ -108,7 +180,13 @@ class JobItem {
       isDone: (map['isDone'] as bool?) ?? false,
       doneAtIso: map['doneAtIso'] as String?,
       nextVisitIso: map['nextVisitIso'] as String?,
+      numeroGarantiaCertificado: map['numeroGarantiaCertificado'] as String?,
       montoCrc: (map['montoCrc'] as num?)?.toDouble(),
+      detalleTrabajo: _parseDetalle(map['detalleTrabajo']),
+      descuentoValor: (map['descuentoValor'] as num?)?.toDouble(),
+      descuentoTipo: map['descuentoTipo'] as String?,
+      tipo: (map['tipo'] as String?) ?? kTipoJobTrabajo,
+      motivoVisita: map['motivoVisita'] as String?,
       sync: parsedSync,
     );
   }
@@ -131,7 +209,13 @@ class JobItem {
       'isDone': isDone,
       'doneAtIso': doneAtIso,
       'nextVisitIso': nextVisitIso,
+      'numeroGarantiaCertificado': numeroGarantiaCertificado,
       'montoCrc': montoCrc,
+      'detalleTrabajo': detalleTrabajo.map((d) => d.toMap()).toList(),
+      'descuentoValor': descuentoValor,
+      'descuentoTipo': descuentoTipo,
+      'tipo': tipo,
+      'motivoVisita': motivoVisita,
       'deviceId': deviceId,
       'sync': sync.toMap(),
       'updatedAtMs': sync.updatedAt.millisecondsSinceEpoch,
@@ -172,7 +256,13 @@ class JobItem {
       isDone: (map['isDone'] as bool?) ?? false,
       doneAtIso: map['doneAtIso'] as String?,
       nextVisitIso: map['nextVisitIso'] as String?,
+      numeroGarantiaCertificado: map['numeroGarantiaCertificado'] as String?,
       montoCrc: (map['montoCrc'] as num?)?.toDouble(),
+      detalleTrabajo: _parseDetalle(map['detalleTrabajo']),
+      descuentoValor: (map['descuentoValor'] as num?)?.toDouble(),
+      descuentoTipo: map['descuentoTipo'] as String?,
+      tipo: (map['tipo'] as String?) ?? kTipoJobTrabajo,
+      motivoVisita: map['motivoVisita'] as String?,
       sync: parsedSync,
     );
   }
@@ -194,7 +284,13 @@ class JobItem {
       isDone: isDone,
       doneAtIso: doneAtIso,
       nextVisitIso: nextVisitIso,
+      numeroGarantiaCertificado: numeroGarantiaCertificado,
       montoCrc: montoCrc,
+      detalleTrabajo: detalleTrabajo,
+      descuentoValor: descuentoValor,
+      descuentoTipo: descuentoTipo,
+      tipo: tipo,
+      motivoVisita: motivoVisita,
       sync: sync.copyWith(
         deviceId: deviceId ?? sync.deviceId,
         isDirty: true,
@@ -217,7 +313,13 @@ class JobItem {
       isDone: isDone,
       doneAtIso: doneAtIso,
       nextVisitIso: nextVisitIso,
+      numeroGarantiaCertificado: numeroGarantiaCertificado,
       montoCrc: montoCrc,
+      detalleTrabajo: detalleTrabajo,
+      descuentoValor: descuentoValor,
+      descuentoTipo: descuentoTipo,
+      tipo: tipo,
+      motivoVisita: motivoVisita,
       sync: sync.copyWith(
         deviceId: deviceId ?? sync.deviceId,
         isDeleted: true,

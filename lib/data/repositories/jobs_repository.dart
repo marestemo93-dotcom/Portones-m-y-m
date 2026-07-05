@@ -357,6 +357,11 @@ class JobsRepository {
     String? clientNameSnapshot,
     String? locationSnapshot,
     double? montoCrc,
+    List<DetalleTrabajoLinea> detalleTrabajo = const [],
+    double? descuentoValor,
+    String? descuentoTipo,
+    String tipo = kTipoJobTrabajo,
+    String? motivoVisita,
   }) async {
     final key = dayKey(day);
     final raw = _box.get(key, defaultValue: []) as List;
@@ -373,6 +378,11 @@ class JobsRepository {
       clientNameSnapshot: clientNameSnapshot,
       locationSnapshot: locationSnapshot,
       montoCrc: montoCrc,
+      detalleTrabajo: detalleTrabajo,
+      descuentoValor: descuentoValor,
+      descuentoTipo: descuentoTipo,
+      tipo: tipo,
+      motivoVisita: motivoVisita,
       sync: SyncMeta.legacy().copyWith(deviceId: deviceId, isDirty: true),
     );
 
@@ -494,11 +504,16 @@ class JobsRepository {
     bool? isDone,
     String? doneAtIso,
     String? nextVisitIso,
+    String? numeroGarantiaCertificado,
     String? clientPhoneKey,
     String? clientNameSnapshot,
     String? locationSnapshot,
     double? montoCrc,
     bool clearMonto = false,
+    List<DetalleTrabajoLinea>? detalleTrabajo,
+    double? descuentoValor,
+    String? descuentoTipo,
+    String? motivoVisita,
   }) async {
     final key = dayKey(day);
     final raw = _box.get(key, defaultValue: []) as List;
@@ -512,6 +527,8 @@ class JobsRepository {
     if (titulo != null) m['titulo'] = titulo;
     m['timeMinutes'] = timeMinutes;
 
+    if (motivoVisita != null) m['motivoVisita'] = motivoVisita;
+
     if (isDone != null) m['isDone'] = isDone;
 
     if (isDone == false) {
@@ -521,10 +538,15 @@ class JobsRepository {
     }
 
     if (nextVisitIso != null) m['nextVisitIso'] = nextVisitIso;
+    if (numeroGarantiaCertificado != null) m['numeroGarantiaCertificado'] = numeroGarantiaCertificado;
 
     if (clientPhoneKey != null) m['clientPhoneKey'] = clientPhoneKey;
     if (clientNameSnapshot != null) m['clientNameSnapshot'] = clientNameSnapshot;
     if (locationSnapshot != null) m['locationSnapshot'] = locationSnapshot;
+
+    if (detalleTrabajo != null) m['detalleTrabajo'] = detalleTrabajo.map((d) => d.toMap()).toList();
+    if (descuentoValor != null) m['descuentoValor'] = descuentoValor;
+    if (descuentoTipo != null) m['descuentoTipo'] = descuentoTipo;
 
     if (clearMonto) {
       m['montoCrc'] = null;

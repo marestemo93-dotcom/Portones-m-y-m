@@ -2,8 +2,8 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:portones_mym/app/providers.dart';
-import 'package:portones_mym/core/services/notif_service.dart';
+import 'package:portones_mym/features/calendar/presentation/dialogs/agregar_trabajo_screen.dart';
+import 'package:portones_mym/features/calendar/presentation/dialogs/agregar_visita_screen.dart';
 
 class JobDialogs {
   static Future<TimeOfDay?> pickTimeCupertino12h(
@@ -73,167 +73,49 @@ class JobDialogs {
       WidgetRef ref, {
         required DateTime day,
       }) async {
-    final jobsRepo = ref.read(jobsRepoProvider);
-    final clientsRepo = ref.read(clientsRepoProvider);
+    final tipo = await pickTipoJob(context);
+    if (!context.mounted || tipo == null) return;
 
-    final tituloCtrl = TextEditingController();
-    final nombreCtrl = TextEditingController();
-    final telefonoCtrl = TextEditingController();
-    final ubicCtrl = TextEditingController();
-    final montoCtrl = TextEditingController();
+    await Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => tipo == 'visita' ? AgregarVisitaScreen(day: day) : AgregarTrabajoScreen(day: day),
+        fullscreenDialog: true,
+      ),
+    );
+  }
 
-    TimeOfDay? pickedTime;
-
-    try {
-      // ✅ Dialog con StatefulBuilder para refrescar solo el dialog
-      final ok = await showDialog<bool>(
-        context: context,
-        builder: (ctx) {
-          return StatefulBuilder(
-            builder: (ctx, setStateDialog) {
-              Future<void> pickTime() async {
-                final t = await pickTimeCupertino12h(
-                  ctx,
-                  initial: pickedTime ?? const TimeOfDay(hour: 9, minute: 0),
-                );
-                if (t != null) {
-                  setStateDialog(() => pickedTime = t);
-                }
-              }
-
-              return AlertDialog(
-                title: const Text('Agregar trabajo'),
-                content: SingleChildScrollView(
-                  child: Column(
-                    children: [
-                      TextField(
-                        controller: tituloCtrl,
-                        decoration: const InputDecoration(
-                          labelText: 'Trabajo',
-                          hintText: 'Ej: Mantenimiento portón',
-                        ),
-                      ),
-                      const SizedBox(height: 10),
-                      TextField(
-                        controller: nombreCtrl,
-                        decoration:
-                        const InputDecoration(labelText: 'Cliente (opcional)'),
-                      ),
-                      TextField(
-                        controller: telefonoCtrl,
-                        keyboardType: TextInputType.phone,
-                        decoration: const InputDecoration(
-                          labelText: 'Teléfono (opcional)',
-                        ),
-                      ),
-                      TextField(
-                        controller: montoCtrl,
-                        keyboardType: TextInputType.number,
-                        decoration: const InputDecoration(
-                          labelText: 'Monto (opcional)',
-                          hintText: 'Ej: 450000',
-                        ),
-                      ),
-                      TextField(
-                        controller: ubicCtrl,
-                        decoration:
-                        const InputDecoration(labelText: 'Ubicación (opcional)'),
-                      ),
-                      const SizedBox(height: 10),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: OutlinedButton.icon(
-                              onPressed: pickTime,
-                              icon: const Icon(Icons.access_time),
-                              label: Text(
-                                pickedTime == null
-                                    ? 'Elegir hora'
-                                    : NotifService.formatAmPm(pickedTime!),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-                actions: [
-                  TextButton(
-                    onPressed: () => Navigator.pop(ctx, false),
-                    child: const Text('Cancelar'),
-                  ),
-                  FilledButton(
-                    onPressed: () => Navigator.pop(ctx, true),
-                    child: const Text('Guardar'),
-                  ),
-                ],
-              );
-            },
-          );
-        },
-      );
-
-      // ✅ Si la pantalla se desmontó mientras el dialog estaba abierto
-      if (!context.mounted) return;
-
-      // ✅ Canceló
-      if (ok != true) return;
-
-      final titulo = tituloCtrl.text.trim();
-      if (titulo.isEmpty) {
-        // ✅ Solo si sigue montado
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('El campo "Trabajo" es obligatorio')),
+  /// Picker "¿Qué querés agendar?" (Visita / Trabajo). Público para que lo
+  /// reutilicen otros puntos de entrada (ej. agendar_bottom_sheet.dart desde
+  /// el chat de WhatsApp) sin duplicar el widget.
+  static Future<String?> pickTipoJob(BuildContext context) {
+    return showModalBottomSheet<String>(
+      context: context,
+      builder: (ctx) {
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: 12),
+                child: Text('¿Qué querés agendar?', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
+              ),
+              ListTile(
+                leading: const Icon(Icons.search),
+                title: const Text('Visita'),
+                subtitle: const Text('Visita técnica previa, sin costo, para cotizar'),
+                onTap: () => Navigator.pop(ctx, 'visita'),
+              ),
+              ListTile(
+                leading: const Icon(Icons.handyman),
+                title: const Text('Trabajo'),
+                subtitle: const Text('Instalación, mantenimiento, con productos y costo'),
+                onTap: () => Navigator.pop(ctx, 'trabajo'),
+              ),
+              const SizedBox(height: 8),
+            ],
+          ),
         );
-        return;
-      }
-
-      // ✅ monto tolerante
-      final montoRaw = montoCtrl.text.trim();
-      double? montoCrc;
-      if (montoRaw.isNotEmpty) {
-        final cleaned = montoRaw.replaceAll(RegExp(r'[^0-9]'), '');
-        if (cleaned.isNotEmpty) {
-          montoCrc = double.tryParse(cleaned);
-        }
-      }
-
-      String? phoneKey;
-      final tel = telefonoCtrl.text.trim();
-      final nombre = nombreCtrl.text.trim();
-      final ubic = ubicCtrl.text.trim();
-
-      if (tel.isNotEmpty) {
-        phoneKey = await clientsRepo.upsert(
-          nombre: nombre.isEmpty ? 'Cliente' : nombre,
-          telefono: tel,
-          ubicacionTexto: ubic,
-        );
-
-        // ✅ por si se desmontó durante el await
-        if (!context.mounted) return;
-      }
-
-      final minutes =
-      pickedTime == null ? null : (pickedTime!.hour * 60 + pickedTime!.minute);
-
-      await jobsRepo.addJob(
-        day: day,
-        titulo: titulo,
-        timeMinutes: minutes,
-        clientPhoneKey: phoneKey,
-        clientNameSnapshot: nombre.isEmpty ? null : nombre,
-        locationSnapshot: ubic.isEmpty ? null : ubic,
-        montoCrc: montoCrc,
-      );
-    } finally {
-      // ✅ Siempre liberar controllers
-      tituloCtrl.dispose();
-      nombreCtrl.dispose();
-      telefonoCtrl.dispose();
-      ubicCtrl.dispose();
-      montoCtrl.dispose();
-    }
+      },
+    );
   }
 }

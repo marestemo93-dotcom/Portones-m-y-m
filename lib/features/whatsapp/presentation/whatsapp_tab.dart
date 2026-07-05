@@ -13,6 +13,8 @@ import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:portones_mym/core/constants/bot_config.dart';
+import 'package:portones_mym/features/calendar/presentation/dialogs/agregar_visita_screen.dart';
+import 'package:portones_mym/features/calendar/presentation/dialogs/job_dialogs.dart';
 import 'productos_screen.dart';
 import 'agendar_bottom_sheet.dart';
 
@@ -418,6 +420,26 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
     final datos = doc.data() ?? {};
     final nombre = (datos['nombreCliente'] ?? widget.nombre).toString();
     final provincia = (datos['provinciaCliente'] ?? '').toString();
+    final nombreFinal = nombre.isNotEmpty ? nombre : widget.nombre;
+
+    if (!mounted) return;
+    final tipo = await JobDialogs.pickTipoJob(context);
+    if (!mounted || tipo == null) return;
+
+    if (tipo == 'visita') {
+      await Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => AgregarVisitaScreen(
+            day: DateTime.now(),
+            nombreInicial: nombreFinal,
+            telefonoInicial: widget.telefono,
+            ubicacionInicial: provincia,
+          ),
+          fullscreenDialog: true,
+        ),
+      );
+      return;
+    }
 
     if (!mounted) return;
     await showModalBottomSheet(
@@ -427,7 +449,7 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       builder: (_) => AgendarBottomSheet(
         telefono: widget.telefono,
-        nombreCliente: nombre.isNotEmpty ? nombre : widget.nombre,
+        nombreCliente: nombreFinal,
         provinciaCliente: provincia,
       ),
     );

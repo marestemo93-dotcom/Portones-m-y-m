@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:hive_flutter/hive_flutter.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import 'ingresos_chart_screen.dart';
+import 'package:portones_mym/app/providers.dart';
 import 'package:portones_mym/core/constants/app_constants.dart';
 import 'package:portones_mym/core/constants/hive_boxes.dart';
 import 'package:portones_mym/core/utils/formatters.dart';
@@ -214,6 +216,10 @@ class _RegistroTabState extends ConsumerState<RegistroTab> {
                           final topLine = '$prov • ${DateFormat.yMMMd(kLocaleEs).format(j.fecha)}$timeStr$montoStr';
                           final subText = loc.isEmpty ? topLine : '$topLine\n$loc';
 
+                          final pdfUrl = j.numeroGarantiaCertificado == null
+                              ? null
+                              : ref.read(garantiasRepoProvider).getByJobId(j.id)?.pdfUrl;
+
                           return Card(
                             child: ListTile(
                               leading: _dotProvincia(provColor, size: 14),
@@ -226,7 +232,18 @@ class _RegistroTabState extends ConsumerState<RegistroTab> {
                               ),
                               subtitle: Text(subText),
                               isThreeLine: loc.isNotEmpty,
-                              trailing: const Icon(Icons.chevron_right),
+                              trailing: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  if ((pdfUrl ?? '').trim().isNotEmpty)
+                                    IconButton(
+                                      tooltip: 'Ver certificado',
+                                      icon: const Icon(Icons.picture_as_pdf),
+                                      onPressed: () => launchUrl(Uri.parse(pdfUrl!), mode: LaunchMode.externalApplication),
+                                    ),
+                                  const Icon(Icons.chevron_right),
+                                ],
+                              ),
                               onTap: () async {
                                 await Navigator.of(context).push(
                                   MaterialPageRoute(builder: (_) => JobDetailScreen(day: day, job: j)),

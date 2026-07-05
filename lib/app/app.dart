@@ -18,6 +18,7 @@ import 'package:portones_mym/features/whatsapp/presentation/whatsapp_tab.dart';
 
 // ✅ realtime
 import 'package:portones_mym/core/sync/realtime_providers.dart';
+import 'package:portones_mym/core/services/visita_watchdog.dart';
 
 // ✅ Servicio Google
 import 'package:portones_mym/core/auth/google_signin_service.dart';
@@ -192,8 +193,15 @@ class _HomeWithRealtimeState extends ConsumerState<_HomeWithRealtime> {
     Future.microtask(() {
       if (mounted) {
         ref.read(jobsRealtimeStarterProvider);
+        VisitaWatchdog.start(ref);
       }
     });
+  }
+
+  @override
+  void dispose() {
+    VisitaWatchdog.stop();
+    super.dispose();
   }
 
   @override

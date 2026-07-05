@@ -257,6 +257,7 @@ class _AgregarProductoScreenState extends State<AgregarProductoScreen> {
   final _idCtrl       = TextEditingController();
   final _nombreCtrl   = TextEditingController();
   final _precioCtrl   = TextEditingController();
+  final _precioNumericoCtrl = TextEditingController();
   final _garantiaCtrl = TextEditingController();
   final _notaCtrl     = TextEditingController();
   final _videoCtrl    = TextEditingController();
@@ -275,6 +276,7 @@ class _AgregarProductoScreenState extends State<AgregarProductoScreen> {
   @override
   void dispose() {
     _idCtrl.dispose(); _nombreCtrl.dispose(); _precioCtrl.dispose();
+    _precioNumericoCtrl.dispose();
     _garantiaCtrl.dispose(); _notaCtrl.dispose(); _videoCtrl.dispose();
     _ordenCtrl.dispose();
     for (final c in _kitCtrls) { c.dispose(); }
@@ -325,6 +327,7 @@ class _AgregarProductoScreenState extends State<AgregarProductoScreen> {
       await FirebaseFirestore.instance.collection('productos').doc(id).set({
         'nombre':      _nombreCtrl.text.trim(),
         'precio':      _precioCtrl.text.trim(),
+        'precioNumerico': double.tryParse(_precioNumericoCtrl.text.trim().replaceAll(',', '')) ?? 0,
         'garantia':    _garantiaCtrl.text.trim(),
         'nota':        _notaCtrl.text.trim(),
         'mediaImagen': imagenUrl ?? '',
@@ -418,6 +421,10 @@ class _AgregarProductoScreenState extends State<AgregarProductoScreen> {
 
             _label('Precio'),
             _campo(_precioCtrl, hint: 'Ej: ₡17,000'),
+            const SizedBox(height: 12),
+
+            _label('Precio numérico (para calcular subtotales de Trabajo)'),
+            _campo(_precioNumericoCtrl, hint: 'Ej: 17000', tipo: TextInputType.number),
             const SizedBox(height: 12),
 
             _label('Garantía'),
@@ -523,6 +530,7 @@ class EditarProductoScreen extends StatefulWidget {
 class _EditarProductoScreenState extends State<EditarProductoScreen> {
   late TextEditingController _nombreCtrl;
   late TextEditingController _precioCtrl;
+  late TextEditingController _precioNumericoCtrl;
   late TextEditingController _garantiaCtrl;
   late TextEditingController _notaCtrl;
   late TextEditingController _videoCtrl;
@@ -536,6 +544,10 @@ class _EditarProductoScreenState extends State<EditarProductoScreen> {
     super.initState();
     _nombreCtrl   = TextEditingController(text: widget.data['nombre'] ?? '');
     _precioCtrl   = TextEditingController(text: widget.data['precio'] ?? '');
+    final precioNumerico = widget.data['precioNumerico'];
+    _precioNumericoCtrl = TextEditingController(
+      text: (precioNumerico is num && precioNumerico > 0) ? precioNumerico.toStringAsFixed(0) : '',
+    );
     _garantiaCtrl = TextEditingController(text: widget.data['garantia'] ?? '');
     _notaCtrl     = TextEditingController(text: widget.data['nota'] ?? '');
     _videoCtrl    = TextEditingController(text: widget.data['mediaVideo'] ?? '');
@@ -549,7 +561,8 @@ class _EditarProductoScreenState extends State<EditarProductoScreen> {
 
   @override
   void dispose() {
-    _nombreCtrl.dispose(); _precioCtrl.dispose(); _garantiaCtrl.dispose();
+    _nombreCtrl.dispose(); _precioCtrl.dispose(); _precioNumericoCtrl.dispose();
+    _garantiaCtrl.dispose();
     _notaCtrl.dispose(); _videoCtrl.dispose();
     for (final c in _kitCtrls) { c.dispose(); }
     super.dispose();
@@ -592,6 +605,7 @@ class _EditarProductoScreenState extends State<EditarProductoScreen> {
       final update = {
         'nombre':    _nombreCtrl.text.trim(),
         'precio':    _precioCtrl.text.trim(),
+        'precioNumerico': double.tryParse(_precioNumericoCtrl.text.trim().replaceAll(',', '')) ?? 0,
         'garantia':  _garantiaCtrl.text.trim(),
         'nota':      _notaCtrl.text.trim(),
         'mediaVideo': _videoCtrl.text.trim(),

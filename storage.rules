@@ -16,6 +16,13 @@ service firebase.storage {
       allow write: if isRealUser();
     }
 
+    match /garantias/{telefono}/{fileName} {
+      // Lectura pública: el PDF se manda por WhatsApp al cliente,
+      // que no tiene sesión en la app.
+      allow read: if true;
+      allow write: if isRealUser();
+    }
+
     // Cualquier otra ruta queda cerrada por defecto.
     match /{allPaths=**} {
       allow read, write: if false;

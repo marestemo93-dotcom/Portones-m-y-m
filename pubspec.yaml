@@ -63,6 +63,10 @@ dependencies:
   # Abrir enlaces externos (por ejemplo Waze)
   url_launcher: ^6.3.0
 
+  # Generación y vista previa de PDF (certificados de garantía)
+  pdf: ^3.11.1
+  printing: ^5.13.1
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
@@ -84,6 +88,7 @@ flutter:
     - assets/brand/icon.png
     - assets/alarm_loud.mp3
     - assets/config/bot_secrets.json
+    - assets/images/
 
 # ─────────────────────────────────────────────
 # ÍCONO (ANDROID)

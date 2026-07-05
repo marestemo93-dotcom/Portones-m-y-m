@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:portones_mym/app/providers.dart';
 import 'package:portones_mym/data/models/job_item.dart';
+import 'package:portones_mym/features/calendar/presentation/dialogs/certificado_garantia_flow.dart';
+import 'package:portones_mym/features/calendar/presentation/dialogs/visita_realizada_flow.dart';
 
 class NextVisitFlow {
   static Future<void> run({
@@ -18,6 +20,23 @@ class NextVisitFlow {
     if (!done) {
       await jobsRepo.toggleDone(day: day, id: job.id, done: false);
       return;
+    }
+
+    // Visita: no aplica nada de lo que sigue (certificado, garantía,
+    // próxima visita) - eso es solo para Trabajo. Marcar una Visita como
+    // realizada dispara su propio flujo (agendar Trabajo con fecha nueva).
+    if (job.esVisita) {
+      await VisitaRealizadaFlow.run(context: context, ref: ref, day: day, visita: job);
+      return;
+    }
+
+    // Certificado de garantía en PDF: solo para trabajos que todavía no
+    // tienen uno generado. Si se cancela, no se marca "Listo" (mismo
+    // comportamiento que cancelar cualquier otro paso de este flujo).
+    if (job.numeroGarantiaCertificado == null) {
+      final completado = await CertificadoGarantiaFlow.run(context: context, ref: ref, day: day, job: job);
+      if (!context.mounted) return;
+      if (!completado) return;
     }
 
     final garMonths = await _pickGarantiaMonths(context);

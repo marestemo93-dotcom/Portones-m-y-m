@@ -31,6 +31,7 @@ class ClientsRepository {
     required String nombre,
     required String telefono,
     String? ubicacionTexto,
+    bool creadoPorVisita = false,
   }) async {
     final phoneKey = normalizePhone(telefono);
     if (phoneKey.isEmpty) throw Exception('Teléfono inválido');
@@ -53,6 +54,11 @@ class ClientsRepository {
       old['id'] = phoneKey;
       old['updatedAt'] = nowIso;
 
+      // Si este upsert NO viene de una Visita (ej. Trabajo, chat), y el
+      // cliente tenía el flag de "solo por visita", ya no aplica: ahora
+      // tiene otro historial real y no debe borrarse en cascada.
+      if (!creadoPorVisita) old['creadoPorVisita'] = false;
+
       await _box.put(phoneKey, old);
       return phoneKey;
     } else {
@@ -62,6 +68,7 @@ class ClientsRepository {
         telefonoRaw: telefono.trim(),
         telefonoKey: phoneKey,
         ubicacionTexto: (ubicacionTexto ?? '').trim(),
+        creadoPorVisita: creadoPorVisita,
       );
       final map = item.toMap();
       map['createdAt'] = nowIso;

@@ -7,12 +7,19 @@ class ClientItem {
   final DateTime createdAt;
   final DateTime updatedAt;
 
+  /// True si este cliente se creó desde el flujo de Visita (agregar_visita_screen).
+  /// Se usa para el borrado en cascada: si una Visita vence sin confirmarse,
+  /// solo se borra el cliente si vino de una Visita Y no tiene otro
+  /// historial (jobs o garantías) asociado.
+  final bool creadoPorVisita;
+
   ClientItem({
     required this.id,
     required this.nombre,
     required this.telefonoRaw,
     required this.telefonoKey,
     required this.ubicacionTexto,
+    this.creadoPorVisita = false,
     DateTime? createdAt,
     DateTime? updatedAt,
   })  : createdAt = createdAt ?? DateTime.now(),
@@ -24,6 +31,7 @@ class ClientItem {
     'telefonoRaw': telefonoRaw,
     'telefonoKey': telefonoKey,
     'ubicacionTexto': ubicacionTexto,
+    'creadoPorVisita': creadoPorVisita,
     'createdAt': createdAt.toIso8601String(),
     'updatedAt': updatedAt.toIso8601String(),
   };
@@ -43,6 +51,7 @@ class ClientItem {
       telefonoRaw: (map['telefonoRaw'] ?? '') as String,
       telefonoKey: (map['telefonoKey'] ?? '') as String,
       ubicacionTexto: (map['ubicacionTexto'] ?? '') as String,
+      creadoPorVisita: (map['creadoPorVisita'] as bool?) ?? false,
       createdAt: parseOrNow('createdAt'),
       updatedAt: parseOrNow('updatedAt'),
     );

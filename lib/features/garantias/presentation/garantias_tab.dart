@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../data/repositories/garantias_repository.dart'; // addMonths(...)
 import '../data/models/garantia_item.dart';
 import 'package:portones_mym/core/constants/app_constants.dart';
@@ -406,6 +407,7 @@ class _GarantiaTile extends StatelessWidget {
     final countdown = _monthsDaysText(g.expiresAt);
 
     final sub = [
+      if ((g.numeroGarantia ?? '').trim().isNotEmpty) 'No. Garantía #${g.numeroGarantia}',
       'Trabajo: ${df.format(g.fechaTrabajo)}',
       'Vence: ${df.format(g.expiresAt)}',
       countdown,
@@ -430,6 +432,12 @@ class _GarantiaTile extends StatelessWidget {
         trailing: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
+            if ((g.pdfUrl ?? '').trim().isNotEmpty)
+              IconButton(
+                tooltip: 'Ver certificado',
+                icon: const Icon(Icons.picture_as_pdf),
+                onPressed: () => launchUrl(Uri.parse(g.pdfUrl!), mode: LaunchMode.externalApplication),
+              ),
             IconButton(
               tooltip: 'Editar',
               icon: const Icon(Icons.edit),
