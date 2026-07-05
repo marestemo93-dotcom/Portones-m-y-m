@@ -10,8 +10,9 @@ import 'package:portones_mym/data/models/job_item.dart';
 import 'package:portones_mym/core/services/notif_service.dart';
 import 'package:portones_mym/core/services/visita_cleanup_service.dart';
 import 'package:portones_mym/core/utils/date_utils.dart';
+import 'package:portones_mym/core/widgets/contact_action_buttons.dart';
 import 'package:portones_mym/features/calendar/presentation/dialogs/certificado_garantia_flow.dart';
-import 'package:portones_mym/features/calendar/presentation/dialogs/visita_realizada_flow.dart';
+import 'package:portones_mym/features/calendar/presentation/dialogs/next_visit_flow.dart';
 import 'package:portones_mym/features/calendar/presentation/widgets/detalle_trabajo_editor.dart';
 
 class JobDetailScreen extends ConsumerStatefulWidget {
@@ -72,17 +73,6 @@ class _JobDetailScreenState extends ConsumerState<JobDetailScreen> {
     _phoneCtrl.dispose();
     _locCtrl.dispose();
     super.dispose();
-  }
-
-  DateTime _addMonths(DateTime d, int months) {
-    final y = d.year + ((d.month - 1 + months) ~/ 12);
-    final m = ((d.month - 1 + months) % 12) + 1;
-    final day = d.day;
-
-    final lastDay = DateTime(y, m + 1, 0).day;
-    final newDay = day > lastDay ? lastDay : day;
-
-    return DateTime(y, m, newDay);
   }
 
   Future<DateTime?> _pickDate(BuildContext context, {required DateTime initial}) async {
@@ -212,134 +202,6 @@ class _JobDetailScreenState extends ConsumerState<JobDetailScreen> {
     }
   }
 
-  Future<void> _showDoneScheduler() async {
-    final jobsRepo = ref.read(jobsRepoProvider);
-
-    final monthsOptions = const [3, 6, 8, 12, 24];
-    int selectedMonths = 6;
-
-    final nextWorkCtrl = TextEditingController(
-      text: _workCtrl.text.trim().isEmpty ? _job.titulo : _workCtrl.text.trim(),
-    );
-
-    final result = await showDialog<bool>(
-      context: context,
-      builder: (ctx) {
-        return AlertDialog(
-          title: const Text('Marcar como “Listo”'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Align(
-                alignment: Alignment.centerLeft,
-                child: Text('¿En cuántos meses querés agendar la próxima visita?'),
-              ),
-              const SizedBox(height: 10),
-              StatefulBuilder(
-                builder: (ctx2, setState2) {
-                  return Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: monthsOptions.map((m) {
-                      final selected = (m == selectedMonths);
-                      return ChoiceChip(
-                        label: Text('$m meses'),
-                        selected: selected,
-                        onSelected: (_) => setState2(() => selectedMonths = m),
-                      );
-                    }).toList(),
-                  );
-                },
-              ),
-              const SizedBox(height: 14),
-              TextField(
-                controller: nextWorkCtrl,
-                decoration: const InputDecoration(
-                  labelText: 'Trabajo para la próxima visita',
-                  hintText: 'Ej: Mantenimiento',
-                ),
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancelar')),
-            FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Guardar')),
-          ],
-        );
-      },
-    );
-
-    if (result != true) {
-      nextWorkCtrl.dispose();
-      return;
-    }
-
-    // ✅ 1) calcular próxima fecha
-    final baseDay = DateTime(_job.fecha.year, _job.fecha.month, _job.fecha.day);
-    final nextDay = _addMonths(baseDay, selectedMonths);
-    final minutes = _pickedTime == null ? _job.timeMinutes : (_pickedTime!.hour * 60 + _pickedTime!.minute);
-
-    // ✅ 2) crear el nuevo job (queda en el calendario)
-    await jobsRepo.addJob(
-      day: nextDay,
-      titulo: nextWorkCtrl.text.trim().isEmpty ? _job.titulo : nextWorkCtrl.text.trim(),
-      timeMinutes: minutes,
-      clientPhoneKey: _job.clientPhoneKey,
-      clientNameSnapshot: _nameCtrl.text.trim().isEmpty ? _job.clientNameSnapshot : _nameCtrl.text.trim(),
-      locationSnapshot: _locCtrl.text.trim().isEmpty ? _job.locationSnapshot : _locCtrl.text.trim(),
-    );
-
-    // ✅ 3) marcar este como listo + guardar nextVisitIso (NO borra)
-    await jobsRepo.updateJobInDay(
-      day: widget.day,
-      id: _job.id,
-      isDone: true,
-      doneAtIso: DateTime.now().toIso8601String(),
-      nextVisitIso: nextDay.toIso8601String(),
-      titulo: _workCtrl.text.trim().isEmpty ? _job.titulo : _workCtrl.text.trim(),
-      timeMinutes: minutes,
-      clientNameSnapshot: _nameCtrl.text.trim().isEmpty ? _job.clientNameSnapshot : _nameCtrl.text.trim(),
-      locationSnapshot: _locCtrl.text.trim().isEmpty ? _job.locationSnapshot : _locCtrl.text.trim(),
-    );
-
-    // ✅ 4) refrescar UI sin cerrar
-    await _reloadFromRepo();
-
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'Listo ✅ Próxima visita agendada en ${DateFormat.yMMMMd(kLocaleEs).format(nextDay)}',
-          ),
-        ),
-      );
-    }
-
-    nextWorkCtrl.dispose();
-  }
-
-  /// Se dispara al marcar una Visita como "Realizada". Delega en
-  /// VisitaRealizadaFlow (compartido con el checkbox de la lista del día en
-  /// next_visit_flow.dart) para no duplicar la lógica.
-  Future<void> _onMarcarRealizada() async {
-    final completado = await VisitaRealizadaFlow.run(
-      context: context,
-      ref: ref,
-      day: widget.day,
-      visita: _job,
-    );
-    if (!completado) return;
-    if (!mounted) return;
-
-    await _reloadFromRepo();
-
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Visita marcada como realizada ✅')),
-      );
-    }
-  }
-
   Future<void> _onGenerarCertificado() async {
     await CertificadoGarantiaFlow.generarCertificado(
       context: context,
@@ -370,6 +232,8 @@ class _JobDetailScreenState extends ConsumerState<JobDetailScreen> {
       appBar: AppBar(
         title: const Text('Detalle'),
         actions: [
+          WhatsAppButton(telefono: _job.clientPhoneKey),
+          WazeButton(lat: _job.ubicacionLat, lng: _job.ubicacionLng),
           IconButton(
             tooltip: 'Cerrar',
             icon: const Icon(Icons.close),
@@ -625,33 +489,16 @@ class _JobDetailScreenState extends ConsumerState<JobDetailScreen> {
                         value: _job.isDone,
                         activeColor: Colors.green,
                         onChanged: (v) async {
-                          if (_job.esVisita) {
-                            if (v == true) {
-                              await _onMarcarRealizada();
-                            } else {
-                              await jobsRepo.updateJobInDay(
-                                day: widget.day,
-                                id: _job.id,
-                                isDone: false,
-                                doneAtIso: null,
-                              );
-                              await _reloadFromRepo();
-                            }
-                            return;
-                          }
-
-                          if ((_job.isDone == false) && (v == true)) {
-                            await _showDoneScheduler();
-                            return;
-                          }
-
-                          // si lo desmarcan (true -> false)
-                          await jobsRepo.updateJobInDay(
+                          // Mismo flujo que usa la lista de trabajos del día
+                          // (jobs_day_list.dart -> NextVisitFlow.run): maneja
+                          // la rama Visita y la rama Trabajo (certificado +
+                          // garantía + próxima visita) en un solo lugar.
+                          await NextVisitFlow.run(
+                            context: context,
+                            ref: ref,
                             day: widget.day,
-                            id: _job.id,
-                            isDone: false,
-                            doneAtIso: null,
-                            nextVisitIso: null,
+                            job: _job,
+                            done: v == true,
                           );
                           await _reloadFromRepo();
                         },

@@ -31,6 +31,7 @@ class VisitaRealizadaFlow {
       firstDate: DateTime(2020, 1, 1),
       lastDate: DateTime(2035, 12, 31),
       locale: const Locale('es', 'ES'),
+      helpText: 'Agendar día de trabajo',
     );
     if (pickedDate == null || !context.mounted) return false;
 

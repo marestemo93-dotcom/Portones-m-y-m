@@ -12,6 +12,7 @@ import 'package:flutter/services.dart' show rootBundle;
 class BotConfig {
   static String baseUrl = 'https://api.portonesmym.com';
   static String apiKey = '';
+  static String googleMapsApiKey = '';
 
   static Future<void> load() async {
     try {
@@ -19,6 +20,7 @@ class BotConfig {
       final data = jsonDecode(raw) as Map<String, dynamic>;
       baseUrl = (data['BOT_BASE_URL'] as String?) ?? baseUrl;
       apiKey = (data['BOT_API_KEY'] as String?) ?? '';
+      googleMapsApiKey = (data['GOOGLE_MAPS_API_KEY'] as String?) ?? '';
     } catch (e) {
       debugPrint('⚠️ No se pudo cargar assets/config/bot_secrets.json: $e');
     }

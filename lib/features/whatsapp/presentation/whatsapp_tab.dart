@@ -13,8 +13,11 @@ import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:portones_mym/core/constants/bot_config.dart';
+import 'package:portones_mym/core/utils/formatters.dart';
 import 'package:portones_mym/features/calendar/presentation/dialogs/agregar_visita_screen.dart';
 import 'package:portones_mym/features/calendar/presentation/dialogs/job_dialogs.dart';
+import 'package:portones_mym/features/clients/data/repositories/clients_repository.dart';
+import 'package:portones_mym/features/clients/presentation/clients_tab.dart';
 import 'productos_screen.dart';
 import 'agendar_bottom_sheet.dart';
 
@@ -221,6 +224,7 @@ class _ConversacionTile extends StatelessWidget {
     final role = ultimo['role'] ?? '';
     if (content.startsWith('[imagen:')) return role == 'assistant' ? '⚙️ 📷 Imagen' : '👤 📷 Imagen';
     if (content.startsWith('[audio:')) return role == 'assistant' ? '⚙️ 🎵 Audio' : '👤 🎵 Audio';
+    if (content.startsWith('[documento:')) return '📄 Certificado de garantía';
     final prefix = role == 'assistant' ? '⚙️ ' : '👤 ';
     return '$prefix$content';
   }
@@ -236,14 +240,50 @@ class _ConversacionTile extends StatelessWidget {
   }
 }
 
+/// Marcador insertado entre mensajes de días distintos dentro del chat
+/// (ver _ChatScreenState._agruparPorFecha). No es un mensaje real.
+class _SeparadorFecha {
+  final DateTime fecha;
+  _SeparadorFecha(this.fecha);
+}
+
+class _SeparadorFechaWidget extends StatelessWidget {
+  const _SeparadorFechaWidget({required this.texto});
+  final String texto;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Container(
+        margin: const EdgeInsets.symmetric(vertical: 10),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+        decoration: BoxDecoration(color: Colors.white10, borderRadius: BorderRadius.circular(10)),
+        child: Text(texto, style: const TextStyle(color: Colors.white60, fontSize: 12, fontWeight: FontWeight.w600)),
+      ),
+    );
+  }
+}
+
 // ============================================================
 // CHAT SCREEN
 // ============================================================
 class ChatScreen extends StatefulWidget {
-  const ChatScreen({super.key, required this.telefono, required this.nombre, required this.data});
+  const ChatScreen({
+    super.key,
+    required this.telefono,
+    required this.nombre,
+    required this.data,
+    this.scrollToTimestamp,
+  });
   final String telefono;
   final String nombre;
   final Map<String, dynamic> data;
+
+  /// Si se pasa, al abrir el chat hace scroll automático hasta el mensaje
+  /// cuyo campo 'timestamp' coincida exactamente (ver _agruparPorFecha /
+  /// GlobalObjectKey por burbuja). Usado desde "Ubicaciones guardadas" en
+  /// Clientes-Tab para saltar al mensaje donde se mandó esa ubicación.
+  final String? scrollToTimestamp;
 
   @override
   State<ChatScreen> createState() => _ChatScreenState();
@@ -262,6 +302,7 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
   bool _recorderIniciado = false;
   String? _rutaGrabacion;
   DateTime? _inicioGrabacion;
+  bool _scrollInicialHecho = false;
   Timer? _grabTimer;
 
   late final AnimationController _pulseController;
@@ -296,6 +337,42 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
     super.dispose();
   }
 
+  /// Recorre el historial y, cada vez que cambia el día respecto al mensaje
+  /// anterior, inserta un marcador _SeparadorFecha antes de ese mensaje -
+  /// mismo patrón visual que WhatsApp real ("Hoy" / "Ayer" / fecha).
+  /// Mensajes sin timestamp (legacy) no disparan separador nuevo, quedan
+  /// agrupados con el día anterior.
+  List<dynamic> _agruparPorFecha(List<dynamic> historial) {
+    final combinado = <dynamic>[];
+    DateTime? diaAnterior;
+    for (final item in historial) {
+      final msg = item as Map;
+      final tsRaw = msg['timestamp']?.toString();
+      DateTime? dia;
+      if (tsRaw != null) {
+        try {
+          final ts = DateTime.parse(tsRaw).toLocal();
+          dia = DateTime(ts.year, ts.month, ts.day);
+        } catch (_) {}
+      }
+      if (dia != null && dia != diaAnterior) {
+        combinado.add(_SeparadorFecha(dia));
+        diaAnterior = dia;
+      }
+      combinado.add(item);
+    }
+    return combinado;
+  }
+
+  String _formatSeparadorFecha(DateTime fecha) {
+    final hoy = DateTime.now();
+    final hoyDia = DateTime(hoy.year, hoy.month, hoy.day);
+    final ayer = hoyDia.subtract(const Duration(days: 1));
+    if (fecha == hoyDia) return 'Hoy';
+    if (fecha == ayer) return 'Ayer';
+    return DateFormat("d 'de' MMMM", 'es').format(fecha);
+  }
+
   void _scrollAbajo() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (_scrollController.hasClients) {
@@ -308,11 +385,73 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
     });
   }
 
+  void _scrollAMensaje(String timestamp) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final ctx = GlobalObjectKey(timestamp).currentContext;
+      if (ctx != null) {
+        Scrollable.ensureVisible(ctx, duration: const Duration(milliseconds: 400), alignment: 0.3);
+      }
+      // Si el mensaje todavía no se construyó (chat muy largo / lejos del
+      // scroll inicial), no hay fallback automático - limitación conocida
+      // del enfoque GlobalKey + ensureVisible sin paquete adicional.
+    });
+  }
+
+  /// Arma la burbuja según el tipo de contenido del mensaje. Extraído del
+  /// itemBuilder para poder envolver el resultado en una key estable
+  /// (ver GlobalObjectKey en el ListView.builder).
+  Widget _buildBurbuja(Map msg) {
+    final role = msg['role'] ?? '';
+    final content = (msg['content'] ?? '').toString();
+    final audioUrl = msg['audioUrl']?.toString();
+    final esBot = role == 'assistant';
+
+    if (content.startsWith('[ubicacion:')) {
+      final coords = content.substring(11, content.length - 1).split(',');
+      if (coords.length == 2) {
+        return _BurbujaUbicacion(
+          lat: double.tryParse(coords[0]) ?? 0,
+          lng: double.tryParse(coords[1]) ?? 0,
+          esBot: esBot,
+        );
+      }
+    }
+    if (content.startsWith('[imagen:')) {
+      return _BurbujaImagen(url: content.substring(8, content.length - 1), esBot: esBot);
+    }
+    if (content.startsWith('[audio:') || audioUrl != null) {
+      final url = audioUrl ?? content.substring(7, content.length - 1);
+      return _BurbujaAudio(url: url, esBot: esBot, transcripcion: audioUrl != null ? content : null);
+    }
+    if (content.startsWith('[video:')) {
+      return _BurbujaVideo(url: content.substring(7, content.length - 1), esBot: esBot);
+    }
+    if (content.startsWith('[documento:')) {
+      return _BurbujaDocumento(url: content.substring(11, content.length - 1), esBot: esBot);
+    }
+
+    return _BurbujaMensaje(texto: content, esBot: esBot, timestamp: msg['timestamp']?.toString());
+  }
+
   String _tiempoGrabacion() {
     final segundos = _inicioGrabacion == null ? 0 : DateTime.now().difference(_inicioGrabacion!).inSeconds;
     final m = (segundos ~/ 60).toString().padLeft(2, '0');
     final s = (segundos % 60).toString().padLeft(2, '0');
     return '$m:$s';
+  }
+
+  Future<void> _abrirDetalleCliente() async {
+    final phoneKey = normalizePhone(widget.telefono);
+    final cliente = ClientsRepository().getByPhoneKey(phoneKey);
+    if (cliente == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Este cliente todavía no está en Clientes-Tab')),
+      );
+      return;
+    }
+    await Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => EditClientScreen(client: cliente)),
+    );
   }
 
   Future<void> _toggleModoManual(bool actual) async {
@@ -558,7 +697,12 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
         final modoManual = data['modoManual'] ?? false;
         final historial = data['historial'] as List<dynamic>? ?? [];
 
-        WidgetsBinding.instance.addPostFrameCallback((_) => _scrollAbajo());
+        if (!_scrollInicialHecho && widget.scrollToTimestamp != null) {
+          _scrollInicialHecho = true;
+          _scrollAMensaje(widget.scrollToTimestamp!);
+        } else {
+          WidgetsBinding.instance.addPostFrameCallback((_) => _scrollAbajo());
+        }
 
         return Scaffold(
           appBar: AppBar(
@@ -573,29 +717,32 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
                 ),
                 const SizedBox(width: 10),
                 Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(widget.nombre.isNotEmpty ? widget.nombre : _formatTelefono(widget.telefono),
-                          style: const TextStyle(fontSize: 16), maxLines: 1, overflow: TextOverflow.ellipsis),
-                      Row(
-                        children: [
-                          Flexible(
-                            child: Text(_formatTelefono(widget.telefono),
-                                style: const TextStyle(fontSize: 12, color: Colors.white54),
-                                overflow: TextOverflow.ellipsis),
-                          ),
-                          if ((widget.data['provinciaCliente'] ?? '').toString().isNotEmpty) ...[
-                            const Text('  •  ', style: TextStyle(fontSize: 12, color: Colors.white38)),
+                  child: GestureDetector(
+                    onTap: _abrirDetalleCliente,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(widget.nombre.isNotEmpty ? widget.nombre : _formatTelefono(widget.telefono),
+                            style: const TextStyle(fontSize: 16), maxLines: 1, overflow: TextOverflow.ellipsis),
+                        Row(
+                          children: [
                             Flexible(
-                              child: Text((widget.data['provinciaCliente'] ?? '').toString(),
-                                  style: const TextStyle(fontSize: 12, color: Color(0xFF25D366)),
+                              child: Text(_formatTelefono(widget.telefono),
+                                  style: const TextStyle(fontSize: 12, color: Colors.white54),
                                   overflow: TextOverflow.ellipsis),
                             ),
+                            if ((widget.data['provinciaCliente'] ?? '').toString().isNotEmpty) ...[
+                              const Text('  •  ', style: TextStyle(fontSize: 12, color: Colors.white38)),
+                              Flexible(
+                                child: Text((widget.data['provinciaCliente'] ?? '').toString(),
+                                    style: const TextStyle(fontSize: 12, color: Color(0xFF25D366)),
+                                    overflow: TextOverflow.ellipsis),
+                              ),
+                            ],
                           ],
-                        ],
-                      ),
-                    ],
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ],
@@ -645,43 +792,30 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
               Expanded(
                 child: historial.isEmpty
                     ? const Center(child: Text('Sin mensajes', style: TextStyle(color: Colors.white38)))
-                    : ListView.builder(
+                    : Builder(builder: (context) {
+                  final combinado = _agruparPorFecha(historial);
+                  return ListView.builder(
                   controller: _scrollController,
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                  itemCount: historial.length,
+                  itemCount: combinado.length,
                   itemBuilder: (context, i) {
-                    final msg = historial[i] as Map;
-                    final role = msg['role'] ?? '';
-                    final content = (msg['content'] ?? '').toString();
-                    final audioUrl = msg['audioUrl']?.toString();
-                    final esBot = role == 'assistant';
-
-                    if (role == 'system') return const SizedBox.shrink();
-
-                    if (content.startsWith('[ubicacion:')) {
-                      final coords = content.substring(11, content.length - 1).split(',');
-                      if (coords.length == 2) {
-                        return _BurbujaUbicacion(
-                          lat: double.tryParse(coords[0]) ?? 0,
-                          lng: double.tryParse(coords[1]) ?? 0,
-                          esBot: esBot,
-                        );
-                      }
-                    }
-                    if (content.startsWith('[imagen:')) {
-                      return _BurbujaImagen(url: content.substring(8, content.length - 1), esBot: esBot);
-                    }
-                    if (content.startsWith('[audio:') || audioUrl != null) {
-                      final url = audioUrl ?? content.substring(7, content.length - 1);
-                      return _BurbujaAudio(url: url, esBot: esBot, transcripcion: audioUrl != null ? content : null);
-                    }
-                    if (content.startsWith('[video:')) {
-                      return _BurbujaVideo(url: content.substring(7, content.length - 1), esBot: esBot);
+                    final item = combinado[i];
+                    if (item is _SeparadorFecha) {
+                      return _SeparadorFechaWidget(texto: _formatSeparadorFecha(item.fecha));
                     }
 
-                    return _BurbujaMensaje(texto: content, esBot: esBot, timestamp: msg['timestamp']?.toString());
+                    final msg = item as Map;
+                    if ((msg['role'] ?? '') == 'system') return const SizedBox.shrink();
+
+                    final bubble = _buildBurbuja(msg);
+                    final ts = msg['timestamp']?.toString();
+                    // Key estable por mensaje para poder saltar a uno
+                    // específico (GlobalObjectKey + Scrollable.ensureVisible),
+                    // ver ChatScreen.scrollToTimestamp.
+                    return ts == null ? bubble : KeyedSubtree(key: GlobalObjectKey(ts), child: bubble);
                   },
-                ),
+                  );
+                }),
               ),
 
               // Barra de entrada
@@ -1160,6 +1294,33 @@ class _BurbujaVideo extends StatelessWidget {
   }
 }
 
+class _BurbujaDocumento extends StatelessWidget {
+  const _BurbujaDocumento({required this.url, required this.esBot});
+  final String url;
+  final bool esBot;
+
+  @override
+  Widget build(BuildContext context) {
+    return Align(
+      alignment: esBot ? Alignment.centerLeft : Alignment.centerRight,
+      child: GestureDetector(
+        onTap: () => launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication),
+        child: Container(
+          margin: const EdgeInsets.symmetric(vertical: 3),
+          padding: const EdgeInsets.all(12),
+          constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.75),
+          decoration: BoxDecoration(color: esBot ? const Color(0xFF1E2A1E) : const Color(0xFF005C4B), borderRadius: BorderRadius.circular(16)),
+          child: const Row(mainAxisSize: MainAxisSize.min, children: [
+            Icon(Icons.picture_as_pdf, color: Colors.redAccent, size: 28),
+            SizedBox(width: 8),
+            Flexible(child: Text('Certificado de garantía', style: TextStyle(color: Colors.white70, fontSize: 13))),
+          ]),
+        ),
+      ),
+    );
+  }
+}
+
 class _BurbujaUbicacion extends StatelessWidget {
   const _BurbujaUbicacion({required this.lat, required this.lng, required this.esBot});
   final double lat;
@@ -1184,6 +1345,25 @@ class _BurbujaUbicacion extends StatelessWidget {
             SizedBox(width: 6),
             Text('Ubicación del cliente', style: TextStyle(color: Colors.white70, fontSize: 13)),
           ]),
+          if (BotConfig.googleMapsApiKey.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(10),
+              child: Image.network(
+                'https://maps.googleapis.com/maps/api/staticmap?center=$lat,$lng&zoom=15&size=400x200&markers=$lat,$lng&key=${BotConfig.googleMapsApiKey}',
+                width: 260,
+                height: 130,
+                fit: BoxFit.cover,
+                loadingBuilder: (_, child, progress) => progress == null
+                    ? child
+                    : const SizedBox(width: 260, height: 130, child: Center(child: CircularProgressIndicator())),
+                errorBuilder: (_, __, ___) => const SizedBox(
+                  width: 260, height: 130,
+                  child: Center(child: Icon(Icons.map_outlined, color: Colors.white24, size: 32)),
+                ),
+              ),
+            ),
+          ],
           const SizedBox(height: 8),
           Text('Lat: ${lat.toStringAsFixed(6)}\nLng: ${lng.toStringAsFixed(6)}', style: const TextStyle(color: Colors.white54, fontSize: 11)),
           const SizedBox(height: 10),

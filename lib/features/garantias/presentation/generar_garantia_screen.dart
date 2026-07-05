@@ -328,6 +328,22 @@ class _GenerarGarantiaScreenState extends State<GenerarGarantiaScreen> {
       throw Exception('HTTP ${resp.statusCode}: ${resp.body}');
     }
 
+    // Deja el certificado visible en el chat, mismo patrón que imagen/audio
+    // (whatsapp_tab.dart). set+merge en vez de update: si el trabajo se
+    // agendó desde el calendario y el cliente nunca chateó, este doc todavía
+    // no existe.
+    final convRef = FirebaseFirestore.instance.collection('conversaciones').doc(telefono);
+    final convDoc = await convRef.get();
+    final historial = List<Map<String, dynamic>>.from(
+      (convDoc.data()?['historial'] as List<dynamic>? ?? []).map((e) => Map<String, dynamic>.from(e as Map)),
+    );
+    historial.add({
+      'role': 'assistant',
+      'content': '[documento:$pdfUrl]',
+      'timestamp': DateTime.now().toIso8601String(),
+    });
+    await convRef.set({'historial': historial, 'ultimoContacto': FieldValue.serverTimestamp()}, SetOptions(merge: true));
+
     await widget.garantiasRepo.attachCertificado(
       job: widget.job,
       numeroGarantia: numero,

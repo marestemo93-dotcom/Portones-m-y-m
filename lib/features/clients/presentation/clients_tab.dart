@@ -1,9 +1,15 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
 
+import 'package:portones_mym/core/constants/app_constants.dart';
 import 'package:portones_mym/features/clients/data/models/client_item.dart';
 import 'package:portones_mym/app/providers.dart';
 import 'package:portones_mym/core/utils/location_colors.dart';
+import 'package:portones_mym/core/widgets/contact_action_buttons.dart';
+import 'package:portones_mym/features/whatsapp/presentation/whatsapp_tab.dart';
+import 'package:portones_mym/data/models/job_item.dart';
 
 /* ==========================
    CLIENTES TAB (AGENDA APP)
@@ -180,14 +186,32 @@ class _EditClientScreenState extends ConsumerState<EditClientScreen> {
     super.dispose();
   }
 
+  /// Busca el job (Visita o Trabajo) más reciente de este cliente que tenga
+  /// ubicación guardada. No se duplica lat/lng en ClientItem (que solo vive
+  /// en Hive local) - se deriva al vuelo desde los jobs, que sí sincronizan
+  /// con Firestore y reciben la ubicación automáticamente por WhatsApp.
+  JobItem? _ultimoJobConUbicacion(String phoneKey) {
+    final jobsRepo = ref.read(jobsRepoProvider);
+    final candidatos = jobsRepo.getAllEvents().values
+        .expand((lista) => lista)
+        .where((j) => j.clientPhoneKey == phoneKey && j.ubicacionLat != null)
+        .toList();
+    if (candidatos.isEmpty) return null;
+    candidatos.sort((a, b) => b.fecha.compareTo(a.fecha));
+    return candidatos.first;
+  }
+
   @override
   Widget build(BuildContext context) {
     final repo = ref.read(clientsRepoProvider);
+    final jobConUbicacion = _ultimoJobConUbicacion(widget.client.telefonoKey);
 
     return Scaffold(
       appBar: AppBar(
         title: const Text('Editar cliente'),
         actions: [
+          WhatsAppButton(telefono: widget.client.telefonoRaw),
+          WazeButton(lat: jobConUbicacion?.ubicacionLat, lng: jobConUbicacion?.ubicacionLng),
           IconButton(
             icon: const Icon(Icons.delete_outline),
             onPressed: () async {
@@ -197,38 +221,127 @@ class _EditClientScreenState extends ConsumerState<EditClientScreen> {
           ),
         ],
       ),
-      body: Padding(
+      body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
-        child: Card(
+        child: Column(
+          children: [
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  children: [
+                    TextField(controller: _name, decoration: const InputDecoration(labelText: 'Nombre')),
+                    TextField(
+                      controller: _phone,
+                      keyboardType: TextInputType.phone,
+                      decoration: const InputDecoration(labelText: 'Teléfono'),
+                    ),
+                    TextField(controller: _loc, decoration: const InputDecoration(labelText: 'Ubicación')),
+                    const SizedBox(height: 16),
+                    FilledButton(
+                      onPressed: () async {
+                        await repo.updateClient(
+                          phoneKey: widget.client.telefonoKey,
+                          nombre: _name.text,
+                          telefonoRaw: _phone.text,
+                          ubicacionTexto: _loc.text,
+                        );
+                        if (context.mounted) Navigator.pop(context);
+                      },
+                      child: const Text('Guardar cambios'),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            _UbicacionesGuardadas(telefonoKey: widget.client.telefonoKey, nombre: widget.client.nombre),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Lista de todas las ubicaciones que el cliente mandó por WhatsApp (puede
+/// tener más de una propiedad). Vive en Firestore, no en Hive - por eso el
+/// servidor sí puede escribirla apenas llega un mensaje de ubicación, a
+/// diferencia de ClientItem.
+class _UbicacionesGuardadas extends StatelessWidget {
+  const _UbicacionesGuardadas({required this.telefonoKey, required this.nombre});
+  final String telefonoKey;
+  final String nombre;
+
+  @override
+  Widget build(BuildContext context) {
+    if (telefonoKey.isEmpty) return const SizedBox.shrink();
+
+    return StreamBuilder<QuerySnapshot>(
+      stream: FirebaseFirestore.instance
+          .collection('conversaciones')
+          .doc(telefonoKey)
+          .collection('ubicaciones')
+          .orderBy('timestamp', descending: true)
+          .snapshots(),
+      builder: (context, snap) {
+        if (!snap.hasData) return const SizedBox.shrink();
+        final docs = snap.data!.docs;
+        if (docs.isEmpty) return const SizedBox.shrink();
+
+        final df = DateFormat.yMMMd(kLocaleEs).add_Hm();
+
+        return Card(
           child: Padding(
             padding: const EdgeInsets.all(16),
             child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                TextField(controller: _name, decoration: const InputDecoration(labelText: 'Nombre')),
-                TextField(
-                  controller: _phone,
-                  keyboardType: TextInputType.phone,
-                  decoration: const InputDecoration(labelText: 'Teléfono'),
-                ),
-                TextField(controller: _loc, decoration: const InputDecoration(labelText: 'Ubicación')),
-                const SizedBox(height: 16),
-                FilledButton(
-                  onPressed: () async {
-                    await repo.updateClient(
-                      phoneKey: widget.client.telefonoKey,
-                      nombre: _name.text,
-                      telefonoRaw: _phone.text,
-                      ubicacionTexto: _loc.text,
+                const Text('Ubicaciones guardadas', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                for (var i = 0; i < docs.length; i++) ...[
+                  Builder(builder: (context) {
+                    final data = docs[i].data() as Map<String, dynamic>;
+                    final lat = (data['lat'] as num?)?.toDouble();
+                    final lng = (data['lng'] as num?)?.toDouble();
+                    final tsRaw = data['timestamp']?.toString();
+                    DateTime? ts;
+                    if (tsRaw != null) {
+                      try {
+                        ts = DateTime.parse(tsRaw).toLocal();
+                      } catch (_) {}
+                    }
+                    return ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      leading: CircleAvatar(radius: 14, child: Text('${i + 1}', style: const TextStyle(fontSize: 12))),
+                      title: Text(ts != null ? df.format(ts) : 'Fecha desconocida'),
+                      trailing: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          IconButton(
+                            icon: const Icon(Icons.chat_outlined, color: Color(0xFF25D366)),
+                            tooltip: 'Ver en el chat',
+                            onPressed: tsRaw == null
+                                ? null
+                                : () => Navigator.of(context).push(MaterialPageRoute(
+                                      builder: (_) => ChatScreen(
+                                        telefono: telefonoKey,
+                                        nombre: nombre,
+                                        data: const {},
+                                        scrollToTimestamp: tsRaw,
+                                      ),
+                                    )),
+                          ),
+                          WazeButton(lat: lat, lng: lng),
+                        ],
+                      ),
                     );
-                    if (context.mounted) Navigator.pop(context);
-                  },
-                  child: const Text('Guardar cambios'),
-                ),
+                  }),
+                  if (i != docs.length - 1) const Divider(height: 1),
+                ],
               ],
             ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 }

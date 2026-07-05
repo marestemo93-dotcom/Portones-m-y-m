@@ -12,6 +12,7 @@ import 'package:portones_mym/core/utils/formatters.dart';
 import 'package:portones_mym/data/models/job_item.dart';
 import 'package:portones_mym/features/calendar/presentation/screens/job_detail_screen.dart';
 import 'package:portones_mym/core/services/notif_service.dart';
+import 'package:portones_mym/core/widgets/contact_action_buttons.dart';
 import 'package:local_auth/local_auth.dart';
 
 enum RegFilter { pending, done, all }
@@ -230,7 +231,20 @@ class _RegistroTabState extends ConsumerState<RegistroTab> {
                                   fontWeight: FontWeight.w800,
                                 ),
                               ),
-                              subtitle: Text(subText),
+                              subtitle: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(subText),
+                                  if (j.detalleTrabajo.isNotEmpty) ...[
+                                    const SizedBox(height: 4),
+                                    for (final linea in j.detalleTrabajo)
+                                      Text(
+                                        '• ${linea.nombre} — ${formatCrc(linea.precio * linea.cantidad)}',
+                                        style: const TextStyle(color: Colors.white54, fontSize: 12),
+                                      ),
+                                  ],
+                                ],
+                              ),
                               isThreeLine: loc.isNotEmpty,
                               trailing: Row(
                                 mainAxisSize: MainAxisSize.min,
@@ -241,7 +255,8 @@ class _RegistroTabState extends ConsumerState<RegistroTab> {
                                       icon: const Icon(Icons.picture_as_pdf),
                                       onPressed: () => launchUrl(Uri.parse(pdfUrl!), mode: LaunchMode.externalApplication),
                                     ),
-                                  const Icon(Icons.chevron_right),
+                                  WhatsAppButton(telefono: j.clientPhoneKey),
+                                  WazeButton(lat: j.ubicacionLat, lng: j.ubicacionLng),
                                 ],
                               ),
                               onTap: () async {

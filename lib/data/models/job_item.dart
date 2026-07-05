@@ -67,6 +67,12 @@ class JobItem {
   final String tipo; // kTipoJobTrabajo | kTipoJobVisita
   final String? motivoVisita; // solo aplica si tipo == kTipoJobVisita
 
+  /// Coordenadas recibidas por WhatsApp ([ubicacion:lat,lng] en el chat),
+  /// asignadas automáticamente al job pendiente más cercano en fecha para
+  /// ese cliente (ver server-bot.js). Habilitan el botón de Waze.
+  final double? ubicacionLat;
+  final double? ubicacionLng;
+
   /// Metadata de sincronización
   final SyncMeta sync;
 
@@ -88,6 +94,8 @@ class JobItem {
     this.descuentoTipo,
     this.tipo = kTipoJobTrabajo,
     this.motivoVisita,
+    this.ubicacionLat,
+    this.ubicacionLng,
     SyncMeta? sync,
   }) : sync = sync ?? SyncMeta.legacy();
 
@@ -135,6 +143,8 @@ class JobItem {
     'descuentoTipo': descuentoTipo,
     'tipo': tipo,
     'motivoVisita': motivoVisita,
+    'ubicacionLat': ubicacionLat,
+    'ubicacionLng': ubicacionLng,
     'sync': sync.toMap(),
     'updatedAtMs': sync.updatedAt.millisecondsSinceEpoch,
     'createdAtMs': sync.createdAt.millisecondsSinceEpoch,
@@ -187,6 +197,8 @@ class JobItem {
       descuentoTipo: map['descuentoTipo'] as String?,
       tipo: (map['tipo'] as String?) ?? kTipoJobTrabajo,
       motivoVisita: map['motivoVisita'] as String?,
+      ubicacionLat: (map['ubicacionLat'] as num?)?.toDouble(),
+      ubicacionLng: (map['ubicacionLng'] as num?)?.toDouble(),
       sync: parsedSync,
     );
   }
@@ -216,6 +228,8 @@ class JobItem {
       'descuentoTipo': descuentoTipo,
       'tipo': tipo,
       'motivoVisita': motivoVisita,
+      'ubicacionLat': ubicacionLat,
+      'ubicacionLng': ubicacionLng,
       'deviceId': deviceId,
       'sync': sync.toMap(),
       'updatedAtMs': sync.updatedAt.millisecondsSinceEpoch,
@@ -263,6 +277,8 @@ class JobItem {
       descuentoTipo: map['descuentoTipo'] as String?,
       tipo: (map['tipo'] as String?) ?? kTipoJobTrabajo,
       motivoVisita: map['motivoVisita'] as String?,
+      ubicacionLat: (map['ubicacionLat'] as num?)?.toDouble(),
+      ubicacionLng: (map['ubicacionLng'] as num?)?.toDouble(),
       sync: parsedSync,
     );
   }
@@ -291,6 +307,8 @@ class JobItem {
       descuentoTipo: descuentoTipo,
       tipo: tipo,
       motivoVisita: motivoVisita,
+      ubicacionLat: ubicacionLat,
+      ubicacionLng: ubicacionLng,
       sync: sync.copyWith(
         deviceId: deviceId ?? sync.deviceId,
         isDirty: true,
@@ -320,6 +338,8 @@ class JobItem {
       descuentoTipo: descuentoTipo,
       tipo: tipo,
       motivoVisita: motivoVisita,
+      ubicacionLat: ubicacionLat,
+      ubicacionLng: ubicacionLng,
       sync: sync.copyWith(
         deviceId: deviceId ?? sync.deviceId,
         isDeleted: true,
