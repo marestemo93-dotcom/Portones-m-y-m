@@ -58,8 +58,10 @@ class CertificadoGarantiaPdf {
 
     final logoBytes = (await rootBundle.load('assets/images/logo_mym.png')).buffer.asUint8List();
     final marcaAguaBytes = (await rootBundle.load('assets/images/marca_agua_mym.png')).buffer.asUint8List();
+    final firmaBytes = (await rootBundle.load('assets/images/firma_marco.png')).buffer.asUint8List();
     final logo = pw.MemoryImage(logoBytes);
     final marcaAgua = pw.MemoryImage(marcaAguaBytes);
+    final firma = pw.MemoryImage(firmaBytes);
 
     final fechaTexto = DateFormat.yMMMMd(kLocaleEs).format(data.fecha);
 
@@ -76,8 +78,8 @@ class CertificadoGarantiaPdf {
                 pw.Positioned.fill(
                   child: pw.Center(
                     child: pw.Opacity(
-                      opacity: 0.15,
-                      child: pw.Image(marcaAgua, width: 320),
+                      opacity: 0.25,
+                      child: pw.Image(marcaAgua, width: 400),
                     ),
                   ),
                 ),
@@ -142,7 +144,12 @@ class CertificadoGarantiaPdf {
 
           _firma('Firma del cliente'),
           pw.SizedBox(height: 24),
-          _firma('Firma del gerente', nombre: 'Marco Esteban Loaiza Mora', detalle: 'Cédula 1-1528-0523 • Gerente'),
+          _firma(
+            'Firma del gerente',
+            nombre: 'Marco Esteban Loaiza Mora',
+            detalle: 'Cédula 1-1528-0523 • Gerente',
+            firmaImagen: firma,
+          ),
         ],
       ),
     );
@@ -228,9 +235,13 @@ class CertificadoGarantiaPdf {
     );
   }
 
-  static pw.Widget _firma(String etiqueta, {String? nombre, String? detalle}) => pw.Column(
+  static pw.Widget _firma(String etiqueta, {String? nombre, String? detalle, pw.ImageProvider? firmaImagen}) => pw.Column(
     crossAxisAlignment: pw.CrossAxisAlignment.center,
     children: [
+      if (firmaImagen != null) ...[
+        pw.Image(firmaImagen, width: 80),
+        pw.SizedBox(height: 2),
+      ],
       pw.Container(width: 220, height: 0.8, color: const PdfColor.fromInt(0xFF999999)),
       pw.SizedBox(height: 4),
       pw.Text(etiqueta, style: const pw.TextStyle(fontSize: 9.5, color: _grisTexto)),
