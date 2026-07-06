@@ -249,6 +249,10 @@ class _GarantiasTabState extends ConsumerState<GarantiasTab> {
 
                               if (mounted) setState(() {});
                             },
+                            onDelete: () async {
+                              await garRepo.deleteByJobId(g.jobId);
+                              if (mounted) setState(() {});
+                            },
                           ),
                         );
                       }),
@@ -388,12 +392,14 @@ class _GarantiaTile extends StatelessWidget {
     required this.color,
     required this.onTap,
     required this.onEdit,
+    required this.onDelete,
   });
 
   final GarantiaItem g;
   final Color color;
   final VoidCallback onTap;
   final VoidCallback onEdit;
+  final VoidCallback onDelete;
 
   @override
   Widget build(BuildContext context) {
@@ -442,6 +448,11 @@ class _GarantiaTile extends StatelessWidget {
               tooltip: 'Editar',
               icon: const Icon(Icons.edit),
               onPressed: onEdit,
+            ),
+            IconButton(
+              tooltip: 'Eliminar',
+              icon: const Icon(Icons.delete_outline),
+              onPressed: onDelete,
             ),
             const Icon(Icons.chevron_right),
           ],

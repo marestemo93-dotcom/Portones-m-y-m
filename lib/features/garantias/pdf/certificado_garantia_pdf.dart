@@ -145,9 +145,9 @@ class CertificadoGarantiaPdf {
           _firma('Firma del cliente'),
           pw.SizedBox(height: 24),
           _firma(
-            'Firma del gerente',
+            null,
             nombre: 'Marco Esteban Loaiza Mora',
-            detalle: 'Cédula 1-1528-0523 • Gerente',
+            detalle: 'Cédula: 1-1528-0523\nPropietario',
             firmaImagen: firma,
           ),
         ],
@@ -235,7 +235,7 @@ class CertificadoGarantiaPdf {
     );
   }
 
-  static pw.Widget _firma(String etiqueta, {String? nombre, String? detalle, pw.ImageProvider? firmaImagen}) => pw.Column(
+  static pw.Widget _firma(String? etiqueta, {String? nombre, String? detalle, pw.ImageProvider? firmaImagen}) => pw.Column(
     crossAxisAlignment: pw.CrossAxisAlignment.center,
     children: [
       if (firmaImagen != null) ...[
@@ -244,13 +244,14 @@ class CertificadoGarantiaPdf {
       ],
       pw.Container(width: 220, height: 0.8, color: const PdfColor.fromInt(0xFF999999)),
       pw.SizedBox(height: 4),
-      pw.Text(etiqueta, style: const pw.TextStyle(fontSize: 9.5, color: _grisTexto)),
+      if (etiqueta != null)
+        pw.Text(etiqueta, style: const pw.TextStyle(fontSize: 9.5, color: _grisTexto)),
       if (nombre != null) ...[
         pw.SizedBox(height: 2),
         pw.Text(nombre, style: pw.TextStyle(fontSize: 9.5, fontWeight: pw.FontWeight.bold, color: _grisTexto)),
       ],
       if (detalle != null)
-        pw.Text(detalle, style: const pw.TextStyle(fontSize: 8.5, color: _grisTexto)),
+        pw.Text(detalle, textAlign: pw.TextAlign.center, style: const pw.TextStyle(fontSize: 8.5, color: _grisTexto)),
     ],
   );
 }
