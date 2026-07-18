@@ -47,3 +47,6 @@ app.*.map.json
 
 # Secretos de compilación (API keys) - no van al repo publico
 /assets/config/bot_secrets.json
+
+# Cache local del Firebase CLI (hashes de deploys de Hosting)
+.firebase/
