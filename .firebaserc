@@ -1,5 +1,15 @@
 {
   "projects": {
     "default": "portones-mym"
-  }
+  },
+  "targets": {
+    "portones-mym": {
+      "hosting": {
+        "privacidad": [
+          "portones-mym-legal"
+        ]
+      }
+    }
+  },
+  "etags": {}
 }

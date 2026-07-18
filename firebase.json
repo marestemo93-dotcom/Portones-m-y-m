@@ -5,5 +5,10 @@
   "storage": {
     "rules": "storage.rules"
   },
+  "hosting": {
+    "target": "privacidad",
+    "public": "hosting_privacidad",
+    "ignore": ["firebase.json", "**/.*", "**/node_modules/**"]
+  },
   "flutter": {"platforms":{"android":{"default":{"projectId":"portones-mym","appId":"1:210911877973:android:315323142b5c8aa21beddc","fileOutput":"android/app/google-services.json"}},"dart":{"lib/firebase_options.dart":{"projectId":"portones-mym","configurations":{"android":"1:210911877973:android:315323142b5c8aa21beddc","ios":"1:210911877973:ios:fec7f8c09c3060b31beddc","macos":"1:210911877973:ios:fec7f8c09c3060b31beddc","web":"1:210911877973:web:d8acd70da34a14fa1beddc","windows":"1:210911877973:web:1675d4753d8af5981beddc"}}}}}
 }
