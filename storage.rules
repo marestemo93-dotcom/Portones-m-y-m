@@ -23,6 +23,30 @@ service firebase.storage {
       allow write: if isRealUser();
     }
 
+    match /contratos/{telefono}/{fileName} {
+      // Lectura pública: el PDF se manda por WhatsApp al cliente,
+      // que no tiene sesión en la app.
+      allow read: if true;
+      allow write: if isRealUser();
+    }
+
+    match /cotizaciones/{telefono}/{fileName} {
+      // Lectura pública: el PDF se manda por WhatsApp al cliente,
+      // que no tiene sesión en la app.
+      allow read: if true;
+      allow write: if isRealUser();
+    }
+
+    match /galeria_trabajos/{allPaths=**} {
+      // Lectura pública: son las fotos/videos de la galeria "Asi trabajamos"
+      // en portonesmym.com, visible sin login. Cubre thumbs/ y full/.
+      // galeria_trabajos_originales/ (los archivos crudos, sin procesar)
+      // es un path distinto y NO queda cubierto por esta regla - se queda
+      // cerrado por el catch-all de abajo.
+      allow read: if true;
+      allow write: if isRealUser();
+    }
+
     // Cualquier otra ruta queda cerrada por defecto.
     match /{allPaths=**} {
       allow read, write: if false;
